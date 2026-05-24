@@ -1,0 +1,13 @@
+target/
+*.class
+*.log
+.idea/
+.vscode/
+node_modules/
+dist/
+coverage/
+.DS_Store
+*.iml
+*.war
+*.jar
+*.tar.gz

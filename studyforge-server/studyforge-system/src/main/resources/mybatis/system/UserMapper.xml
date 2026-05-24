@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.system.mapper.UserMapper">
+    <resultMap id="UserResultMap" type="com.studyforge.system.entity.User">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="email" property="email"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="role" property="role"/>
+        <result column="status" property="status"/>
+        <result column="reputation_score" property="reputationScore"/>
+        <result column="created_time" property="createdTime"/>
+    </resultMap>
+
+    <sql id="UserColumns">
+        user_id,
+        username,
+        email,
+        password_hash,
+        role,
+        status,
+        reputation_score,
+        created_time
+    </sql>
+
+    <select id="selectById" parameterType="long" resultMap="UserResultMap">
+        SELECT
+        <include refid="UserColumns"/>
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByAccount" parameterType="string" resultMap="UserResultMap">
+        SELECT
+        <include refid="UserColumns"/>
+        FROM users
+        WHERE username = #{account}
+           OR email = #{account}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.system.entity.User" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO users (
+            username,
+            email,
+            password_hash,
+            role,
+            status,
+            reputation_score
+        )
+        VALUES (
+            #{username},
+            #{email},
+            #{passwordHash},
+            #{role},
+            #{status},
+            #{reputationScore}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.system.entity.User">
+        UPDATE users
+        SET
+            email = #{email},
+            role = #{role},
+            status = #{status},
+            reputation_score = #{reputationScore}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

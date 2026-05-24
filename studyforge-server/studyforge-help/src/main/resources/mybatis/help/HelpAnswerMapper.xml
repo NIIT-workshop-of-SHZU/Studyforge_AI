@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.help.mapper.HelpAnswerMapper">
+    <resultMap id="HelpAnswerResultMap" type="com.studyforge.help.entity.HelpAnswer">
+        <id column="answer_id" property="answerId"/>
+        <result column="help_id" property="helpId"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
+        <result column="is_accepted" property="accepted"/>
+        <result column="created_time" property="createdTime"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="HelpAnswerResultMap">
+        SELECT
+            answer_id,
+            help_id,
+            user_id,
+            content,
+            is_accepted,
+            created_time
+        FROM help_answers
+        WHERE answer_id = #{answerId}
+    </select>
+
+    <select id="selectByHelpId" resultMap="HelpAnswerResultMap">
+        SELECT
+            answer_id,
+            help_id,
+            user_id,
+            content,
+            is_accepted,
+            created_time
+        FROM help_answers
+        WHERE help_id = #{helpId}
+        ORDER BY is_accepted DESC, created_time ASC
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.help.entity.HelpAnswer" useGeneratedKeys="true" keyProperty="answerId">
+        INSERT INTO help_answers (
+            help_id,
+            user_id,
+            content,
+            is_accepted
+        )
+        VALUES (
+            #{helpId},
+            #{userId},
+            #{content},
+            #{accepted}
+        )
+    </insert>
+
+    <update id="clearAccepted">
+        UPDATE help_answers
+        SET is_accepted = 0
+        WHERE help_id = #{helpId}
+    </update>
+
+    <update id="accept">
+        UPDATE help_answers
+        SET is_accepted = 1
+        WHERE answer_id = #{answerId}
+    </update>
+</mapper>
