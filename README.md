@@ -98,6 +98,18 @@ User-side Vue URL:
 http://localhost:5174
 ```
 
+Start the admin console:
+
+```bash
+./scripts/start_frontend.sh
+```
+
+Admin Vue URL:
+
+```text
+http://localhost:5173
+```
+
 ## Database
 
 For a new database, run the schema first. Import the seed script only when you intentionally want to reset the local demo data:
@@ -141,3 +153,26 @@ The schema uses a main table plus i18n table model for content:
 - `category_i18n`
 
 This keeps the content model extensible beyond fixed `zh/en` columns.
+
+## Deployment
+
+Server deployment preparation is documented in:
+
+```text
+docs/server-deployment.md
+```
+
+Build a release artifact:
+
+```bash
+./scripts/build_release.sh
+```
+
+Production examples are included under:
+
+```text
+deploy/nginx/studyforge.conf.example
+deploy/systemd/studyforge-api.service.example
+studyforge-frontend/apps/knowledge-web/.env.production.example
+studyforge-frontend/apps/portal-web/.env.production.example
+```

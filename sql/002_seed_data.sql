@@ -966,5 +966,5 @@ SET a.floor_no = ranked.floor_no
 WHERE a.floor_no = 0;
 
 INSERT INTO admin_audit_logs (admin_id, target_type, target_id, action_type, remark)
-SELECT u.user_id, 'integration_settings', 0, 'UPDATE_INTEGRATION_SETTINGS', 'AI and voice provider settings initialized for the local StudyForge environment.'
+SELECT u.user_id, 'integration_settings', 0, 'UPDATE_INTEGRATION_SETTINGS', 'AI, voice, and image provider settings initialized for the local StudyForge environment.'
 FROM users u WHERE u.username = 'ops_admin';
