@@ -18,17 +18,6 @@ on:
   push:
     branches:
       - staging
-    paths:
-      - "studyforge-server/**"
-      - "studyforge-frontend/**"
-      - "sql/**"
-      - "scripts/**"
-      - "deploy/docker/**"
-      - "docs/server-deployment.md"
-      - "docs/staging-deployment.md"
-      - ".github/workflows/staging.yml"
-      - ".dockerignore"
-      - ".gitignore"
   workflow_dispatch:
 
 concurrency:
