@@ -8,6 +8,7 @@ DB_HOST="${DB_HOST:-}"
 DB_PORT="${DB_PORT:-}"
 RESET_SEED="${RESET_SEED:-0}"
 DB_CLIENT="${DB_CLIENT:-}"
+CREATE_DATABASE="${CREATE_DATABASE:-1}"
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -38,7 +39,9 @@ if [ -n "$DB_PORT" ]; then
     DB_ARGS+=("-P${DB_PORT}")
 fi
 
-"$DB_CLIENT" "${DB_ARGS[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+if [ "$CREATE_DATABASE" = "1" ]; then
+    "$DB_CLIENT" "${DB_ARGS[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+fi
 "$DB_CLIENT" "${DB_ARGS[@]}" "$DB_NAME" < "$ROOT_DIR/sql/001_schema.sql"
 
 if [ "$RESET_SEED" = "1" ]; then

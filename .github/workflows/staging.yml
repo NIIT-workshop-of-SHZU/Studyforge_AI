@@ -131,10 +131,12 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
-          mkdir -p artifact/backend artifact/frontend
+          mkdir -p artifact/backend artifact/frontend artifact/scripts artifact/sql
           cp studyforge-server/studyforge-webapi/target/studyforge-webapi-1.0.0-SNAPSHOT.war artifact/backend/studyforge-webapi.war
           cp -R studyforge-frontend/apps/knowledge-web/dist artifact/frontend/knowledge
           cp -R studyforge-frontend/apps/portal-web/dist artifact/frontend/portal
+          cp scripts/import_local_db.sh artifact/scripts/
+          cp sql/[0-9][0-9][0-9]_*.sql artifact/sql/
           tar -czf studyforge-staging-release.tar.gz -C artifact .
 
       - name: Upload staging artifact

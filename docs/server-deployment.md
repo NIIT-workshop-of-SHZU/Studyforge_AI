@@ -22,6 +22,7 @@ Spring MVC Controller 返回 JSON
 - JDK 17
 - Tomcat 10.1.x，用于运行 `studyforge-webapi.war`
 - MySQL 8.x；本地开发可用 MariaDB，但服务器以 MySQL 8 为准
+- MySQL 客户端命令 `mysql`，用于自动部署时执行非破坏性迁移
 - Nginx，用于托管两个前端站点并反向代理 API
 - rsync、curl、OpenSSH Server
 
@@ -60,6 +61,31 @@ DB_HOST=127.0.0.1 \
 `scripts/import_local_db.sh` 会导入 `001_schema.sql`，并自动执行 `003_*.sql`、`004_*.sql` 这类非破坏性迁移。不要在已有业务数据的服务器上执行 `RESET_SEED=1`。
 
 SQL 脚本不再内置 `CREATE DATABASE` 或 `USE`，必须由命令行显式选择数据库。这样同一套脚本可以稳定用于本地 `test_studyforge_ai_v2`、staging `studyforge_ai` 或 production 数据库，不会在导入过程中切换到错误库。
+
+自动部署时，发布包会包含 `sql/` 和 `scripts/import_local_db.sh`。如果服务器上配置了 `DB_MIGRATE=1`，`scripts/deploy_staging.sh` 会在替换 WAR 和前端文件前自动执行非破坏性迁移：
+
+```bash
+sudo mkdir -p /etc/studyforge
+sudo vim /etc/studyforge/staging.env
+```
+
+示例内容：
+
+```bash
+DB_MIGRATE=1
+DB_CLIENT=mysql
+DB_NAME=studyforge_ai
+DB_USER=studyforge
+DB_PASSWORD='change-this-password'
+DB_HOST=127.0.0.1
+DB_PORT=3306
+CREATE_DATABASE=0
+HEALTH_URL=http://127.0.0.1:8080/api/v1/health
+```
+
+这个文件需要让执行部署脚本的用户可读，例如只允许 `deploy` 用户或部署用户组读取，不要设成全局可写。
+
+`CREATE_DATABASE=0` 表示数据库由 root 一次性创建，部署账号只负责在已存在的库里建表和迁移字段，避免给应用数据库账号过大的全局权限。
 
 ## 3. 后端运行配置
 

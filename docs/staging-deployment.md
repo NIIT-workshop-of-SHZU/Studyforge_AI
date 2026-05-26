@@ -58,6 +58,24 @@ SUDO
 SUDO=
 ```
 
+发布包会包含后端 WAR、两个前端 dist、`sql/` 和数据库导入脚本。服务器如需每次 staging 部署自动执行非破坏性数据库迁移，在 `/etc/studyforge/staging.env` 中配置：
+
+```bash
+DB_MIGRATE=1
+DB_CLIENT=mysql
+DB_NAME=studyforge_ai
+DB_USER=studyforge
+DB_PASSWORD='change-this-password'
+DB_HOST=127.0.0.1
+DB_PORT=3306
+CREATE_DATABASE=0
+HEALTH_URL=http://127.0.0.1:8080/api/v1/health
+```
+
+这个文件需要让执行部署脚本的用户可读，例如只允许 `deploy` 用户或部署用户组读取，不要设成全局可写。
+
+自动迁移不会导入 `002_seed_data.sql`，也不会清空业务数据。
+
 ## 分支保护建议
 
 建议给 `staging` 分支开启：

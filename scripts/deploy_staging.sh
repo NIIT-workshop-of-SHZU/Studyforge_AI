@@ -13,6 +13,21 @@ BACKEND_SERVICE="${BACKEND_SERVICE:-tomcat-staging}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
 HEALTH_URL="${HEALTH_URL:-}"
 SUDO="${SUDO:-sudo -n}"
+DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-/etc/studyforge/staging.env}"
+
+if [ -r "$DEPLOY_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$DEPLOY_ENV_FILE"
+  set +a
+fi
+
+DB_MIGRATE="${DB_MIGRATE:-0}"
+DB_CLIENT="${DB_CLIENT:-mysql}"
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-3306}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+CREATE_DATABASE="${CREATE_DATABASE:-0}"
 
 TIMESTAMP="$(date +%Y%m%d%H%M%S)"
 RELEASE_DIR="${APP_ROOT}/releases/${TIMESTAMP}-${SHA:0:8}"
@@ -35,6 +50,26 @@ fi
 if [ ! -d "$RELEASE_DIR/frontend/knowledge" ] || [ ! -d "$RELEASE_DIR/frontend/portal" ]; then
   echo "Frontend dist directories missing from artifact" >&2
   exit 1
+fi
+
+if [ "$DB_MIGRATE" = "1" ]; then
+  if [ ! -x "$RELEASE_DIR/scripts/import_local_db.sh" ] || [ ! -d "$RELEASE_DIR/sql" ]; then
+    echo "Database migration assets missing from artifact" >&2
+    exit 1
+  fi
+  if [ -z "${DB_NAME:-}" ] || [ -z "${DB_USER:-}" ]; then
+    echo "DB_NAME and DB_USER are required when DB_MIGRATE=1" >&2
+    exit 1
+  fi
+  DB_CLIENT="$DB_CLIENT" \
+    DB_NAME="$DB_NAME" \
+    DB_USER="$DB_USER" \
+    DB_PASSWORD="$DB_PASSWORD" \
+    DB_HOST="$DB_HOST" \
+    DB_PORT="$DB_PORT" \
+    CREATE_DATABASE="$CREATE_DATABASE" \
+    RESET_SEED=0 \
+    "$RELEASE_DIR/scripts/import_local_db.sh"
 fi
 
 $SUDO rsync -a --delete "$RELEASE_DIR/frontend/knowledge/" "$FRONTEND_KNOWLEDGE_DIR/"
