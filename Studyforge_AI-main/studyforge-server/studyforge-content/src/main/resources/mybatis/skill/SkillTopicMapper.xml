@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.content.mapper.skill.SkillTopicMapper">
+    <resultMap id="SkillTopicResultMap" type="com.studyforge.content.entity.skill.SkillTopic">
+        <id column="skill_id" property="skillId"/>
+        <result column="skill_code" property="skillCode"/>
+        <result column="cover_image_url" property="coverImageUrl"/>
+        <result column="difficulty" property="difficulty"/>
+        <result column="learner_count" property="learnerCount"/>
+        <result column="rating_score" property="ratingScore"/>
+        <result column="post_count" property="postCount"/>
+        <result column="status" property="status"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <sql id="SkillTopicColumns">
+        skill_id,
+        skill_code,
+        cover_image_url,
+        difficulty,
+        learner_count,
+        rating_score,
+        post_count,
+        status,
+        created_time,
+        updated_time
+    </sql>
+
+    <select id="selectById" parameterType="long" resultMap="SkillTopicResultMap">
+        SELECT <include refid="SkillTopicColumns"/>
+        FROM skill_topics
+        WHERE skill_id = #{skillId}
+    </select>
+
+    <select id="selectByCode" parameterType="string" resultMap="SkillTopicResultMap">
+        SELECT <include refid="SkillTopicColumns"/>
+        FROM skill_topics
+        WHERE skill_code = #{skillCode}
+    </select>
+
+    <select id="selectAll" resultMap="SkillTopicResultMap">
+        SELECT <include refid="SkillTopicColumns"/>
+        FROM skill_topics
+        <if test="status != null and status != ''">
+            WHERE status = #{status}
+        </if>
+        ORDER BY learner_count DESC
+    </select>
+
+    <select id="selectByDifficulty" resultMap="SkillTopicResultMap">
+        SELECT <include refid="SkillTopicColumns"/>
+        FROM skill_topics
+        WHERE difficulty = #{difficulty}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY learner_count DESC
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.content.entity.skill.SkillTopic" useGeneratedKeys="true" keyProperty="skillId">
+        INSERT INTO skill_topics (
+            skill_code,
+            cover_image_url,
+            difficulty,
+            learner_count,
+            rating_score,
+            post_count,
+            status
+        ) VALUES (
+            #{skillCode},
+            #{coverImageUrl},
+            #{difficulty},
+            #{learnerCount},
+            #{ratingScore},
+            #{postCount},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.content.entity.skill.SkillTopic">
+        UPDATE skill_topics
+        SET
+            skill_code = #{skillCode},
+            cover_image_url = #{coverImageUrl},
+            difficulty = #{difficulty},
+            rating_score = #{ratingScore},
+            status = #{status}
+        WHERE skill_id = #{skillId}
+    </update>
+
+    <update id="incrementLearnerCount">
+        UPDATE skill_topics
+        SET learner_count = GREATEST(0, learner_count + #{delta})
+        WHERE skill_id = #{skillId}
+    </update>
+
+    <update id="incrementPostCount">
+        UPDATE skill_topics
+        SET post_count = GREATEST(0, post_count + #{delta})
+        WHERE skill_id = #{skillId}
+    </update>
+</mapper>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.content.mapper.skill.RoadmapNodeMapper">
+    <resultMap id="RoadmapNodeResultMap" type="com.studyforge.content.entity.skill.RoadmapNode">
+        <id column="node_id" property="nodeId"/>
+        <result column="roadmap_id" property="roadmapId"/>
+        <result column="sort_no" property="sortNo"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="estimated_minutes" property="estimatedMinutes"/>
+        <result column="related_post_id" property="relatedPostId"/>
+        <result column="created_time" property="createdTime"/>
+    </resultMap>
+
+    <sql id="RoadmapNodeColumns">
+        node_id,
+        roadmap_id,
+        sort_no,
+        title,
+        description,
+        estimated_minutes,
+        related_post_id,
+        created_time
+    </sql>
+
+    <select id="selectById" parameterType="long" resultMap="RoadmapNodeResultMap">
+        SELECT <include refid="RoadmapNodeColumns"/>
+        FROM roadmap_nodes
+        WHERE node_id = #{nodeId}
+    </select>
+
+    <select id="selectByRoadmapId" resultMap="RoadmapNodeResultMap">
+        SELECT <include refid="RoadmapNodeColumns"/>
+        FROM roadmap_nodes
+        WHERE roadmap_id = #{roadmapId}
+        ORDER BY sort_no ASC
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.content.entity.skill.RoadmapNode" useGeneratedKeys="true" keyProperty="nodeId">
+        INSERT INTO roadmap_nodes (
+            roadmap_id,
+            sort_no,
+            title,
+            description,
+            estimated_minutes,
+            related_post_id
+        ) VALUES (
+            #{roadmapId},
+            #{sortNo},
+            #{title},
+            #{description},
+            #{estimatedMinutes},
+            #{relatedPostId}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.content.entity.skill.RoadmapNode">
+        UPDATE roadmap_nodes
+        SET
+            sort_no = #{sortNo},
+            title = #{title},
+            description = #{description},
+            estimated_minutes = #{estimatedMinutes},
+            related_post_id = #{relatedPostId}
+        WHERE node_id = #{nodeId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM roadmap_nodes
+        WHERE node_id = #{nodeId}
+    </delete>
+
+    <delete id="deleteByRoadmapId" parameterType="long">
+        DELETE FROM roadmap_nodes
+        WHERE roadmap_id = #{roadmapId}
+    </delete>
+
+    <select id="countByRoadmapId" resultType="int">
+        SELECT COUNT(*)
+        FROM roadmap_nodes
+        WHERE roadmap_id = #{roadmapId}
+    </select>
+</mapper>

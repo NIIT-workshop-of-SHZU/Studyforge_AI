@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.content.mapper.skill.LearningRoadmapMapper">
+    <resultMap id="LearningRoadmapResultMap" type="com.studyforge.content.entity.skill.LearningRoadmap">
+        <id column="roadmap_id" property="roadmapId"/>
+        <result column="skill_id" property="skillId"/>
+        <result column="author_id" property="authorId"/>
+        <result column="title" property="title"/>
+        <result column="summary" property="summary"/>
+        <result column="difficulty" property="difficulty"/>
+        <result column="estimated_days" property="estimatedDays"/>
+        <result column="cover_image_url" property="coverImageUrl"/>
+        <result column="rating_score" property="ratingScore"/>
+        <result column="learner_count" property="learnerCount"/>
+        <result column="node_count" property="nodeCount"/>
+        <result column="status" property="status"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <sql id="LearningRoadmapColumns">
+        roadmap_id,
+        skill_id,
+        author_id,
+        title,
+        summary,
+        difficulty,
+        estimated_days,
+        cover_image_url,
+        rating_score,
+        learner_count,
+        node_count,
+        status,
+        created_time,
+        updated_time
+    </sql>
+
+    <select id="selectById" parameterType="long" resultMap="LearningRoadmapResultMap">
+        SELECT <include refid="LearningRoadmapColumns"/>
+        FROM learning_roadmaps
+        WHERE roadmap_id = #{roadmapId}
+    </select>
+
+    <select id="selectBySkillId" resultMap="LearningRoadmapResultMap">
+        SELECT <include refid="LearningRoadmapColumns"/>
+        FROM learning_roadmaps
+        WHERE skill_id = #{skillId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY learner_count DESC
+    </select>
+
+    <select id="selectByAuthorId" resultMap="LearningRoadmapResultMap">
+        SELECT <include refid="LearningRoadmapColumns"/>
+        FROM learning_roadmaps
+        WHERE author_id = #{authorId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY created_time DESC
+    </select>
+
+    <select id="selectPopular" resultMap="LearningRoadmapResultMap">
+        SELECT <include refid="LearningRoadmapColumns"/>
+        FROM learning_roadmaps
+        <if test="status != null and status != ''">
+            WHERE status = #{status}
+        </if>
+        ORDER BY learner_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.content.entity.skill.LearningRoadmap" useGeneratedKeys="true" keyProperty="roadmapId">
+        INSERT INTO learning_roadmaps (
+            skill_id,
+            author_id,
+            title,
+            summary,
+            difficulty,
+            estimated_days,
+            cover_image_url,
+            rating_score,
+            learner_count,
+            node_count,
+            status
+        ) VALUES (
+            #{skillId},
+            #{authorId},
+            #{title},
+            #{summary},
+            #{difficulty},
+            #{estimatedDays},
+            #{coverImageUrl},
+            #{ratingScore},
+            #{learnerCount},
+            #{nodeCount},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.content.entity.skill.LearningRoadmap">
+        UPDATE learning_roadmaps
+        SET
+            title = #{title},
+            summary = #{summary},
+            difficulty = #{difficulty},
+            estimated_days = #{estimatedDays},
+            cover_image_url = #{coverImageUrl},
+            rating_score = #{ratingScore},
+            status = #{status}
+        WHERE roadmap_id = #{roadmapId}
+    </update>
+
+    <update id="incrementLearnerCount">
+        UPDATE learning_roadmaps
+        SET learner_count = GREATEST(0, learner_count + #{delta})
+        WHERE roadmap_id = #{roadmapId}
+    </update>
+
+    <update id="incrementNodeCount">
+        UPDATE learning_roadmaps
+        SET node_count = GREATEST(0, node_count + #{delta})
+        WHERE roadmap_id = #{roadmapId}
+    </update>
+</mapper>

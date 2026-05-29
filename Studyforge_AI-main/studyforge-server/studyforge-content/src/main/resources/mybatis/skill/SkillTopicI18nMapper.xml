@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.content.mapper.skill.SkillTopicI18nMapper">
+    <resultMap id="SkillTopicI18nResultMap" type="com.studyforge.content.entity.skill.SkillTopicI18n">
+        <id column="id" property="id"/>
+        <result column="skill_id" property="skillId"/>
+        <result column="language_code" property="languageCode"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="created_time" property="createdTime"/>
+    </resultMap>
+
+    <sql id="SkillTopicI18nColumns">
+        id,
+        skill_id,
+        language_code,
+        name,
+        description,
+        created_time
+    </sql>
+
+    <select id="selectBySkillIdAndLanguage" resultMap="SkillTopicI18nResultMap">
+        SELECT <include refid="SkillTopicI18nColumns"/>
+        FROM skill_topic_i18n
+        WHERE skill_id = #{skillId} AND language_code = #{languageCode}
+    </select>
+
+    <select id="selectBySkillId" resultMap="SkillTopicI18nResultMap">
+        SELECT <include refid="SkillTopicI18nColumns"/>
+        FROM skill_topic_i18n
+        WHERE skill_id = #{skillId}
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.content.entity.skill.SkillTopicI18n" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO skill_topic_i18n (
+            skill_id,
+            language_code,
+            name,
+            description
+        ) VALUES (
+            #{skillId},
+            #{languageCode},
+            #{name},
+            #{description}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.content.entity.skill.SkillTopicI18n">
+        UPDATE skill_topic_i18n
+        SET
+            name = #{name},
+            description = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteBySkillId">
+        DELETE FROM skill_topic_i18n
+        WHERE skill_id = #{skillId}
+    </delete>
+</mapper>

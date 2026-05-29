@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.system.mapper.achievement.UserAchievementMapper">
+    <resultMap id="UserAchievementResultMap" type="com.studyforge.system.entity.achievement.UserAchievement">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="achievement_id" property="achievementId"/>
+        <result column="unlocked_time" property="unlockedTime"/>
+    </resultMap>
+
+    <sql id="UserAchievementColumns">
+        id,
+        user_id,
+        achievement_id,
+        unlocked_time
+    </sql>
+
+    <select id="selectByUserId" resultMap="UserAchievementResultMap">
+        SELECT <include refid="UserAchievementColumns"/>
+        FROM user_achievements
+        WHERE user_id = #{userId}
+        ORDER BY unlocked_time DESC
+    </select>
+
+    <select id="selectByUserAndAchievement" resultMap="UserAchievementResultMap">
+        SELECT <include refid="UserAchievementColumns"/>
+        FROM user_achievements
+        WHERE user_id = #{userId} AND achievement_id = #{achievementId}
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.system.entity.achievement.UserAchievement" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_achievements (
+            user_id,
+            achievement_id,
+            unlocked_time
+        ) VALUES (
+            #{userId},
+            #{achievementId},
+            #{unlockedTime}
+        )
+    </insert>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM user_achievements
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

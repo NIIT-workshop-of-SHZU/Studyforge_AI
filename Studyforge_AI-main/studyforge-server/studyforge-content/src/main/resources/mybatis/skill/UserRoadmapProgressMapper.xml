@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.content.mapper.skill.UserRoadmapProgressMapper">
+    <resultMap id="UserRoadmapProgressResultMap" type="com.studyforge.content.entity.skill.UserRoadmapProgress">
+        <id column="progress_id" property="progressId"/>
+        <result column="user_id" property="userId"/>
+        <result column="roadmap_id" property="roadmapId"/>
+        <result column="current_node_id" property="currentNodeId"/>
+        <result column="completed_nodes" property="completedNodes"/>
+        <result column="progress_percent" property="progressPercent"/>
+        <result column="status" property="status"/>
+        <result column="started_time" property="startedTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <sql id="UserRoadmapProgressColumns">
+        progress_id,
+        user_id,
+        roadmap_id,
+        current_node_id,
+        completed_nodes,
+        progress_percent,
+        status,
+        started_time,
+        updated_time
+    </sql>
+
+    <select id="selectByUserAndRoadmap" resultMap="UserRoadmapProgressResultMap">
+        SELECT <include refid="UserRoadmapProgressColumns"/>
+        FROM user_roadmap_progress
+        WHERE user_id = #{userId} AND roadmap_id = #{roadmapId}
+    </select>
+
+    <select id="selectByUserId" resultMap="UserRoadmapProgressResultMap">
+        SELECT <include refid="UserRoadmapProgressColumns"/>
+        FROM user_roadmap_progress
+        WHERE user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY updated_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.content.entity.skill.UserRoadmapProgress" useGeneratedKeys="true" keyProperty="progressId">
+        INSERT INTO user_roadmap_progress (
+            user_id,
+            roadmap_id,
+            current_node_id,
+            completed_nodes,
+            progress_percent,
+            status
+        ) VALUES (
+            #{userId},
+            #{roadmapId},
+            #{currentNodeId},
+            #{completedNodes},
+            #{progressPercent},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.studyforge.content.entity.skill.UserRoadmapProgress">
+        UPDATE user_roadmap_progress
+        SET
+            current_node_id = #{currentNodeId},
+            completed_nodes = #{completedNodes},
+            progress_percent = #{progressPercent},
+            status = #{status}
+        WHERE progress_id = #{progressId}
+    </update>
+
+    <delete id="deleteByUserAndRoadmap">
+        DELETE FROM user_roadmap_progress
+        WHERE user_id = #{userId} AND roadmap_id = #{roadmapId}
+    </delete>
+</mapper>
