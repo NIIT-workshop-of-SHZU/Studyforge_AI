@@ -13,6 +13,7 @@ coverage/
 *.tar.gz
 uploads/
 api配置.md
+jdbc.properties
 .env
 .env.*
 !.env.example
