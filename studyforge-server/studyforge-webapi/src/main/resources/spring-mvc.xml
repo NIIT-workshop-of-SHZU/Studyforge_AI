@@ -22,7 +22,9 @@
     <mvc:interceptors>
         <mvc:interceptor>
             <mvc:mapping path="/api/v1/admin/**"/>
-            <bean class="com.studyforge.framework.web.AdminInterceptor"/>
+            <bean class="com.studyforge.framework.web.AdminInterceptor">
+                <constructor-arg ref="authServiceImpl"/>
+            </bean>
         </mvc:interceptor>
         <mvc:interceptor>
             <mvc:mapping path="/api/v1/**"/>
@@ -30,11 +32,18 @@
             <mvc:exclude-mapping path="/api/v1/auth/login"/>
             <mvc:exclude-mapping path="/api/v1/auth/register"/>
             <mvc:exclude-mapping path="/api/v1/posts/**"/>
-            <mvc:exclude-mapping path="/api/v1/users/**"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/profile"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/posts"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/activities"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/followers"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/following"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/friends"/>
             <mvc:exclude-mapping path="/api/v1/files/**"/>
             <mvc:exclude-mapping path="/api/v1/help"/>
             <mvc:exclude-mapping path="/api/v1/help/**"/>
-            <bean class="com.studyforge.framework.web.LoginInterceptor"/>
+            <bean class="com.studyforge.framework.web.LoginInterceptor">
+                <constructor-arg ref="authServiceImpl"/>
+            </bean>
         </mvc:interceptor>
     </mvc:interceptors>
 </beans>
