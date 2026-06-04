@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth';
 import AdminDashboardView from '@/views/AdminDashboardView.vue';
 import CommunityManageView from '@/views/CommunityManageView.vue';
 import FeedView from '@/views/FeedView.vue';
+import HomepageReviewView from '@/views/HomepageReviewView.vue';
 import LoginView from '@/views/LoginView.vue';
 import PostDetailView from '@/views/PostDetailView.vue';
 import SettingsView from '@/views/SettingsView.vue';
@@ -42,6 +43,11 @@ export const router = createRouter({
       path: '/community',
       name: 'community-manage',
       component: CommunityManageView
+    },
+    {
+      path: '/homepage-reviews',
+      name: 'homepage-reviews',
+      component: HomepageReviewView
     },
     {
       path: '/settings',
