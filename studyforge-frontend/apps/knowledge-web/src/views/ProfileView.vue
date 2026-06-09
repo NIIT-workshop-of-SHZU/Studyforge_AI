@@ -11,25 +11,23 @@ import {
   MessageSquareReply,
   PenLine,
   RefreshCw,
-  Settings,
   Star,
   UserCheck,
   UserPlus,
-  UserRound,
-  Users
+  UserRound
 } from '@lucide/vue';
 import { ApiError } from '@/api/http';
-import { followUser, getFriends, getMyProfile, getUserActivities, getUserPosts, getUserProfile, reviewFriendRequest, sendFriendRequest, unfollowUser } from '@/api/users';
+import { followUser, getMyProfile, getUserActivities, getUserPosts, getUserProfile, reviewFriendRequest, sendFriendRequest, unfollowUser } from '@/api/users';
 import EmptyState from '@/components/EmptyState.vue';
 import KnowledgeCard from '@/components/KnowledgeCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
-import type { PostSummary, SocialUser, TopicCategory, UserActivity, UserProfile } from '@/types/api';
+import type { PostSummary, TopicCategory, UserActivity, UserProfile } from '@/types/api';
 import { formatShortDateTime } from '@/utils/date';
 
-type ProfileTab = 'activity' | 'posts' | 'friends';
+type ProfileTab = 'activity' | 'posts';
 
 const route = useRoute();
 const preferencesStore = usePreferencesStore();
@@ -38,7 +36,6 @@ const sessionStore = useSessionStore();
 const profile = ref<UserProfile | null>(null);
 const posts = ref<PostSummary[]>([]);
 const activities = ref<UserActivity[]>([]);
-const friends = ref<SocialUser[]>([]);
 const loading = ref(false);
 const actionLoading = ref(false);
 const errorMessage = ref('');
@@ -72,7 +69,6 @@ async function loadProfile() {
     profile.value = null;
     posts.value = [];
     activities.value = [];
-    friends.value = [];
     return;
   }
   if (!targetUserId.value) {
@@ -85,13 +81,11 @@ async function loadProfile() {
   try {
     const profileData = isMeRoute.value ? await getMyProfile() : await getUserProfile(targetUserId.value);
     profile.value = profileData;
-    const [postData, friendData, activityData] = await Promise.all([
+    const [postData, activityData] = await Promise.all([
       getUserPosts(profileData.userId, preferencesStore.languageCode),
-      getFriends(profileData.userId),
       getUserActivities(profileData.userId, preferencesStore.languageCode)
     ]);
     posts.value = postData;
-    friends.value = friendData;
     activities.value = activityData;
   } catch (error) {
     if (error instanceof ApiError && error.code === 4010) {
@@ -190,7 +184,6 @@ async function requestFriendship() {
       await sendFriendRequest(profile.value.userId, '你好，我想和你成为好友，之后可以继续交流学习内容。');
     }
     profile.value = await getUserProfile(profile.value.userId);
-    friends.value = await getFriends(profile.value.userId);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '好友操作暂时没有成功';
   } finally {
@@ -225,14 +218,6 @@ watch(
             <RefreshCw :size="17" />
             <span>刷新</span>
           </button>
-          <RouterLink v-if="profile.self" class="secondary-button" to="/friends">
-            <MessageCircle :size="17" />
-            <span>好友消息</span>
-          </RouterLink>
-          <RouterLink v-if="profile.self" class="primary-button" to="/account">
-            <Settings :size="17" />
-            <span>编辑资料</span>
-          </RouterLink>
           <button v-if="!profile.self" class="primary-button" type="button" :disabled="actionLoading" @click="toggleFollow">
             <UserPlus :size="17" />
             <span>{{ profile.followedByViewer ? '已关注' : '关注' }}</span>
@@ -265,73 +250,50 @@ watch(
           <div>
             <div class="profile-title-row">
               <h1>{{ profile.displayName }}</h1>
-              <span class="level-badge">Lv.{{ profile.communityLevel }}</span>
+              <span class="level-badge" tabindex="0">
+                Lv.{{ profile.communityLevel }}
+                <span class="level-tooltip" role="tooltip">
+                  <span class="level-tooltip-row">
+                    <strong>{{ profile.experiencePoints }}</strong>
+                    <span>经验值</span>
+                  </span>
+                  <meter min="0" max="100" :value="progressPercent" />
+                  <small>距离下一级还差 {{ Math.max(0, profile.nextLevelExperience - profile.experiencePoints) }} 经验</small>
+                </span>
+              </span>
             </div>
             <p class="profile-username">@{{ profile.username }}</p>
             <p class="profile-bio">{{ profile.bio || '这个用户还没有写签名。' }}</p>
           </div>
         </div>
-
-        <div class="profile-level">
-          <div>
-            <strong>{{ profile.experiencePoints }}</strong>
-            <span>经验值</span>
-          </div>
-          <meter min="0" max="100" :value="progressPercent" />
-          <small>距离下一级还差 {{ Math.max(0, profile.nextLevelExperience - profile.experiencePoints) }} 经验</small>
-        </div>
       </section>
 
       <section class="profile-stats">
-        <div>
+        <RouterLink to="/friends">
           <strong>{{ profile.friendCount }}</strong>
           <span>好友</span>
-        </div>
-        <div>
+        </RouterLink>
+        <RouterLink to="/following">
           <strong>{{ profile.followingCount }}</strong>
           <span>关注</span>
-        </div>
-        <div>
+        </RouterLink>
+        <RouterLink to="/followers">
           <strong>{{ profile.followerCount }}</strong>
           <span>粉丝</span>
-        </div>
-        <div>
+        </RouterLink>
+        <RouterLink to="/favorites">
           <strong>{{ profile.favoriteCount }}</strong>
           <span>收藏</span>
-        </div>
-        <div>
+        </RouterLink>
+        <RouterLink to="/history">
           <strong>{{ profile.historyCount }}</strong>
           <span>历史浏览</span>
-        </div>
-      </section>
-
-      <section v-if="profile.self" class="profile-shortcuts">
-        <RouterLink class="profile-shortcut-card" to="/publish">
-          <PenLine :size="24" />
-          <strong>创作中心</strong>
-          <span>发布新的学习内容</span>
-        </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/favorites">
-          <BookmarkCheck :size="24" />
-          <strong>收藏夹</strong>
-          <span>按主题整理文章</span>
-        </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/friends">
-          <MessageCircle :size="24" />
-          <strong>好友</strong>
-          <span>处理申请和消息</span>
-        </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/account">
-          <Settings :size="24" />
-          <strong>账号设置</strong>
-          <span>修改头像、名字和密码</span>
         </RouterLink>
       </section>
 
       <nav class="profile-tabs" aria-label="个人主页内容">
         <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">动态</button>
         <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">投稿</button>
-        <button type="button" :class="{ active: activeTab === 'friends' }" @click="activeTab = 'friends'">好友</button>
       </nav>
 
       <section v-if="activeTab === 'activity'" class="profile-content-grid">
@@ -403,26 +365,9 @@ watch(
         </aside>
       </section>
 
-      <section v-else-if="activeTab === 'posts'" class="knowledge-grid compact-grid">
+      <section v-else class="knowledge-grid compact-grid">
         <KnowledgeCard v-for="(post, index) in posts" :key="post.postId" :post="post" :category="categoryFor(post)" :index="index" />
         <EmptyState v-if="posts.length === 0" title="还没有投稿" description="发布后的文章会展示在这里。" />
-      </section>
-
-      <section v-else class="social-grid">
-        <article v-for="user in friends" :key="user.userId" class="social-card">
-          <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="" />
-          <UserRound v-else :size="24" />
-          <div>
-            <strong>{{ user.displayName }}</strong>
-            <span>@{{ user.username }} · Lv.{{ user.communityLevel }}</span>
-            <p>{{ user.bio }}</p>
-          </div>
-          <RouterLink class="secondary-button stable-action" :to="`/users/${user.userId}`">
-            <Users :size="16" />
-            <span>主页</span>
-          </RouterLink>
-        </article>
-        <EmptyState v-if="friends.length === 0" title="还没有好友" description="通过好友申请后，好友会显示在这里。关注和粉丝不会混到好友列表里。" />
       </section>
     </template>
   </section>
