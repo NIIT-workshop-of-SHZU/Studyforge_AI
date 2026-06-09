@@ -34,6 +34,19 @@ const coverUrl = computed(() => {
 
 const canEdit = computed(() => sessionStore.isAuthenticated && sessionStore.userId === props.post.authorId);
 const publishTime = computed(() => formatRelativeTime(props.post.createdTime, preferencesStore.languageCode));
+const copy = computed(() =>
+  preferencesStore.languageCode === 'en_US'
+    ? {
+        editTitle: 'Edit post',
+        edit: 'Edit',
+        open: 'Read Post'
+      }
+    : {
+        editTitle: '编辑帖子',
+        edit: '编辑',
+        open: '阅读全文'
+      }
+);
 </script>
 
 <template>
@@ -83,12 +96,12 @@ const publishTime = computed(() => formatRelativeTime(props.post.createdTime, pr
         </div>
 
         <div class="card-actions">
-          <RouterLink v-if="canEdit" class="card-edit-link" :to="`/posts/${post.postId}/edit`" title="编辑帖子">
+          <RouterLink v-if="canEdit" class="card-edit-link" :to="`/posts/${post.postId}/edit`" :title="copy.editTitle">
             <PencilLine :size="16" />
-            <span>编辑</span>
+            <span>{{ copy.edit }}</span>
           </RouterLink>
           <RouterLink class="card-link" :to="{ path: `/posts/${post.postId}`, query: { language: post.languageCode } }">
-            <span>阅读全文</span>
+            <span>{{ copy.open }}</span>
             <ArrowUpRight :size="17" />
           </RouterLink>
         </div>

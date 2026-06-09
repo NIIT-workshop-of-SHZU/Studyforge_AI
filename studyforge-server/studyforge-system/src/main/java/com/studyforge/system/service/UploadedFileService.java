@@ -10,5 +10,12 @@ public interface UploadedFileService {
                              String contentType,
                              long fileSize);
 
+    UploadedFile recordHomepageMedia(Long userId,
+                                      String originalFilename,
+                                      String storedFilename,
+                                      String fileUrl,
+                                      String contentType,
+                                      long fileSize);
+
     UploadedFile getByStoredFilename(String storedFilename);
 }

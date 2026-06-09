@@ -1,29 +1,72 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { LogIn } from '@lucide/vue';
 import { ApiError } from '@/api/http';
 import studyforgeLogo from '@/assets/studyforge-logo-mark.png';
+import { usePreferencesStore } from '@/stores/preferences';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const preferencesStore = usePreferencesStore();
 const form = reactive({
-  account: 'ops_admin',
-  password: 'AdminForge@2026'
+  account: '',
+  password: ''
 });
 const errorMessage = ref('');
+
+const copy = computed(() =>
+  preferencesStore.languageCode === 'en_US'
+    ? {
+        title: 'StudyForge Content Console',
+        desc: 'Moderate knowledge content, monitor service health, and manage the daily community workflow.',
+        panel: 'Account Login',
+        account: 'Account',
+        password: 'Password',
+        submitting: 'Signing in',
+        submit: 'Sign in',
+        badAuth: 'Account or password is incorrect.',
+        expired: 'Your previous session expired. Please sign in again.',
+        unavailable: 'Login is temporarily unavailable. Please check the local API proxy and try again.'
+      }
+    : {
+        title: 'StudyForge 内容控制台',
+        desc: '管理知识内容、查看服务状态，并进入团队的日常运营工作台。',
+        panel: '账号登录',
+        account: '账号',
+        password: '密码',
+        submitting: '登录中',
+        submit: '登录',
+        badAuth: '账号或密码不正确。',
+        expired: '上一份登录会话已失效，请重新登录。',
+        unavailable: '登录暂时不可用，请检查本地 API 代理后再试。'
+      }
+);
+
+function normalizeLoginError(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.code === 401 || error.code === 403) {
+      return copy.value.badAuth;
+    }
+    return error.message || copy.value.unavailable;
+  }
+
+  return copy.value.unavailable;
+}
 
 async function submit() {
   errorMessage.value = '';
 
   try {
     await authStore.login(form);
+    authStore.syncFromStorage();
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/feed';
     await router.push(redirect);
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : '登录失败';
+    authStore.syncFromStorage();
+    errorMessage.value = normalizeLoginError(error);
   }
 }
 </script>
@@ -42,8 +85,8 @@ async function submit() {
       </div>
 
       <div class="login-copy">
-        <h1>StudyForge 内容控制台</h1>
-        <p>管理知识内容、查看服务状态，并进入团队的日常运营工作台。</p>
+        <h1>{{ copy.title }}</h1>
+        <p>{{ copy.desc }}</p>
       </div>
 
       <dl class="login-stack">
@@ -65,17 +108,17 @@ async function submit() {
     <section class="login-card" aria-labelledby="login-title">
       <div class="section-heading compact">
         <span>Portal</span>
-        <h2 id="login-title">账号登录</h2>
+        <h2 id="login-title">{{ copy.panel }}</h2>
       </div>
 
       <form class="form-stack" @submit.prevent="submit">
         <label>
-          <span>账号</span>
+          <span>{{ copy.account }}</span>
           <input v-model.trim="form.account" name="account" autocomplete="username" required />
         </label>
 
         <label>
-          <span>密码</span>
+          <span>{{ copy.password }}</span>
           <input v-model="form.password" name="password" type="password" autocomplete="current-password" required />
         </label>
 
@@ -83,7 +126,7 @@ async function submit() {
 
         <button class="primary-button full-width" type="submit" :disabled="authStore.loading">
           <LogIn :size="18" />
-          <span>{{ authStore.loading ? '登录中' : '登录' }}</span>
+          <span>{{ authStore.loading ? copy.submitting : copy.submit }}</span>
         </button>
       </form>
     </section>

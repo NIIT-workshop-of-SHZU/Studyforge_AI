@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia';
 import * as authApi from '@/api/auth';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/stores/sessionStorage';
-import type { LoginRequest, LoginSession, RegisterRequest } from '@/types/api';
-import type { UserProfile } from '@/types/api';
+import type { LoginRequest, LoginSession, RegisterRequest, UserProfile } from '@/types/api';
 
 interface SessionState {
   initialized: boolean;
@@ -18,8 +17,8 @@ export const useSessionStore = defineStore('session', {
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.session?.accessToken),
-    username: (state) => state.session?.username || '访客',
-    displayName: (state) => state.session?.displayName || state.session?.username || '访客',
+    username: (state) => state.session?.username || 'Guest',
+    displayName: (state) => state.session?.displayName || state.session?.username || 'Guest',
     userId: (state) => state.session?.userId ?? null
   },
   actions: {
@@ -30,6 +29,13 @@ export const useSessionStore = defineStore('session', {
 
       this.session = readStoredSession();
       this.initialized = true;
+    },
+    syncFromStorage() {
+      this.session = readStoredSession();
+    },
+    resetSession() {
+      this.session = null;
+      clearStoredSession();
     },
     async login(payload: LoginRequest) {
       this.loading = true;
@@ -78,8 +84,7 @@ export const useSessionStore = defineStore('session', {
           await authApi.logout();
         }
       } finally {
-        this.session = null;
-        clearStoredSession();
+        this.resetSession();
       }
     }
   }

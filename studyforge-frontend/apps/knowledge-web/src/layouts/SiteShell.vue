@@ -23,6 +23,7 @@ const copy = computed(() => {
   if (preferencesStore.languageCode === 'en_US') {
     return {
       brandSub: 'Study Space',
+      navAria: 'Primary navigation',
       home: 'Home',
       knowledge: 'Knowledge',
       library: 'My Study',
@@ -41,14 +42,15 @@ const copy = computed(() => {
 
   return {
     brandSub: '学习空间',
+    navAria: '主导航',
     home: '首页',
     knowledge: '知识流',
     library: '我的学习',
-      profile: '我的主页',
-      friends: '好友',
-      notifications: '通知',
-      account: '账号',
-      publish: '发布',
+    profile: '我的主页',
+    friends: '好友',
+    notifications: '通知',
+    account: '账号',
+    publish: '发布',
     help: '求助',
     search: '搜索文章或主题',
     language: '语言',
@@ -139,7 +141,7 @@ watch(
         </span>
       </RouterLink>
 
-      <nav class="main-nav" aria-label="主导航">
+      <nav class="main-nav" :aria-label="copy.navAria">
         <RouterLink to="/">
           <Home :size="17" />
           <span>{{ copy.home }}</span>
