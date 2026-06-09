@@ -3870,8 +3870,14 @@ meter::-webkit-meter-optimum-value {
   background: var(--surface-muted);
 }
 
+.profile-tabs.has-ai-usage {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .profile-tabs button {
   min-height: 44px;
+  min-width: 0;
+  padding: 0 10px;
   border-radius: 7px;
   background: transparent;
   color: var(--text-muted);
@@ -5563,6 +5569,10 @@ meter::-webkit-meter-optimum-value {
 
   .profile-tabs {
     grid-template-columns: 1fr;
+  }
+
+  .profile-tabs.has-ai-usage {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .hero-copy h1 {

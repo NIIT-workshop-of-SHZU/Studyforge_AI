@@ -45,6 +45,7 @@ export interface PostSummary {
   hotScore: number;
   createdTime: string | number[] | null;
   updatedTime: string | number[] | null;
+  activityTime?: string | number[] | null;
   importanceScore?: number | null;
   pinned?: boolean | null;
   rankReasons?: string[] | null;

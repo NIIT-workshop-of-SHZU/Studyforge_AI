@@ -11,7 +11,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 import type { HelpAnswer, HelpRequest } from '@/types/api';
-import { formatShortDateTime } from '@/utils/date';
+import { formatShortDateTime, toDate } from '@/utils/date';
 
 interface ForumThreadNode {
   id: number;
@@ -52,7 +52,18 @@ const form = reactive({
 });
 
 const titleInput = ref<HTMLInputElement | null>(null);
-const activeHelp = computed(() => helps.value.find((item) => item.helpId === activeHelpId.value) ?? helps.value[0] ?? null);
+const sortedHelps = computed(() =>
+  helps.value
+    .map((help, index) => ({ help, index }))
+    .sort(
+      (first, second) =>
+        helpLanguageRank(first.help) - helpLanguageRank(second.help) ||
+        helpTimestamp(second.help) - helpTimestamp(first.help) ||
+        first.index - second.index
+    )
+    .map(({ help }) => help)
+);
+const activeHelp = computed(() => sortedHelps.value.find((item) => item.helpId === activeHelpId.value) ?? sortedHelps.value[0] ?? null);
 const activeAnswers = computed(() => (activeHelp.value ? answers.value[activeHelp.value.helpId] ?? [] : []));
 const activeAnswerTree = computed(() => buildAnswerTree(activeAnswers.value));
 const openHelpCount = computed(() => helps.value.filter((item) => normalizeStatus(item.status) === 'OPEN').length);
@@ -66,6 +77,23 @@ function routeHelpId() {
 
 function normalizeStatus(status: string) {
   return (status || '').toUpperCase();
+}
+
+function inferHelpLanguage(help: HelpRequest) {
+  const text = `${help.title} ${help.description}`;
+  return /[\u3400-\u9fff]/.test(text) ? 'zh_CN' : 'en_US';
+}
+
+function helpLanguageRank(help: HelpRequest) {
+  return inferHelpLanguage(help) === preferencesStore.languageCode ? 0 : 1;
+}
+
+function helpTimestamp(help: HelpRequest) {
+  return toDate(help.createdTime)?.getTime() ?? 0;
+}
+
+function preferredHelpId() {
+  return sortedHelps.value[0]?.helpId ?? null;
 }
 
 function statusLabel(status: string) {
@@ -94,7 +122,8 @@ async function loadHelps() {
   try {
     helps.value = await getHelpRequests();
     const targetHelpId = routeHelpId();
-    activeHelpId.value = targetHelpId && helps.value.some((item) => item.helpId === targetHelpId) ? targetHelpId : (activeHelpId.value ?? helps.value[0]?.helpId ?? null);
+    const currentHelpId = activeHelpId.value && helps.value.some((item) => item.helpId === activeHelpId.value) ? activeHelpId.value : null;
+    activeHelpId.value = targetHelpId && helps.value.some((item) => item.helpId === targetHelpId) ? targetHelpId : (currentHelpId ?? preferredHelpId());
     if (activeHelpId.value) {
       await loadAnswers(activeHelpId.value);
     }
@@ -295,6 +324,19 @@ watch(
     await selectHelp(targetHelpId);
   }
 );
+
+watch(
+  () => preferencesStore.languageCode,
+  async () => {
+    const current = helps.value.find((item) => item.helpId === activeHelpId.value);
+    if (!current || helpLanguageRank(current) > 0) {
+      activeHelpId.value = preferredHelpId();
+    }
+    if (activeHelpId.value && !answers.value[activeHelpId.value]) {
+      await loadAnswers(activeHelpId.value);
+    }
+  }
+);
 </script>
 
 <template>
@@ -351,7 +393,7 @@ watch(
 
           <div v-else class="help-items">
             <button
-              v-for="help in helps"
+              v-for="help in sortedHelps"
               :key="help.helpId"
               class="help-item"
               :class="{ active: help.helpId === activeHelp?.helpId }"

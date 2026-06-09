@@ -19,6 +19,7 @@ public record PostSummaryVO(Long postId,
                             double hotScore,
                             LocalDateTime createdTime,
                             LocalDateTime updatedTime,
+                            LocalDateTime activityTime,
                             Double importanceScore,
                             Boolean pinned,
                             List<String> rankReasons) {
@@ -57,6 +58,7 @@ public record PostSummaryVO(Long postId,
                 updatedTime,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -79,6 +81,7 @@ public record PostSummaryVO(Long postId,
                 hotScore,
                 createdTime,
                 updatedTime,
+                activityTime,
                 score,
                 pinnedValue,
                 reasons

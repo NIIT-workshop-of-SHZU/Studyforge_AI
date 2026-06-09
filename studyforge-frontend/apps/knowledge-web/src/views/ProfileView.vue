@@ -396,7 +396,7 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
         </RouterLink>
       </section>
 
-      <nav class="profile-tabs" :aria-label="copy.tabsAria">
+      <nav class="profile-tabs" :class="{ 'has-ai-usage': profile.self }" :aria-label="copy.tabsAria">
         <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">{{ copy.activity }}</button>
         <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">{{ copy.posts }}</button>
         <button v-if="profile.self" type="button" :class="{ active: activeTab === 'ai-usage' }" @click="activeTab = 'ai-usage'">{{ copy.aiUsageTab }}</button>
