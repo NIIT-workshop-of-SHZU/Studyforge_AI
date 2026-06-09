@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import { BookmarkCheck, FolderPlus, LogIn, Pin, RefreshCw, Settings, Trash2 } from '@lucide/vue';
+import { BookmarkCheck, FolderPlus, LogIn, NotebookTabs, Pin, RefreshCw, Settings, Trash2 } from '@lucide/vue';
 import {
   createCollection,
   getCollectionPosts,
@@ -73,6 +73,9 @@ const copy = computed(() =>
         hideReasons: 'Hide reasons',
         pin: 'Pin',
         unpin: 'Unpin',
+        studyOverview: 'My Study',
+        collectionsNav: 'Collections',
+        memoryNav: 'MEMORY.md',
         expired: 'Your session expired. Please sign in again to manage collections.',
         loadFailed: 'Collections could not be loaded.',
         openFailed: 'This collection could not be opened.',
@@ -112,6 +115,9 @@ const copy = computed(() =>
         hideReasons: '收起推荐原因',
         pin: '置顶',
         unpin: '取消置顶',
+        studyOverview: '我的学习',
+        collectionsNav: '收藏夹',
+        memoryNav: 'MEMORY.md',
         expired: '登录状态已过期，请重新登录后整理收藏夹。',
         loadFailed: '收藏夹暂时没取到',
         openFailed: '这个收藏夹暂时打不开',
@@ -141,32 +147,85 @@ const categories = computed<Record<string, TopicCategory>>(() =>
       }
 );
 
+let collectionsRequestId = 0;
+let postsRequestId = 0;
+
+function isCurrentCollectionsRequest(requestId: number, userId: number) {
+  return requestId === collectionsRequestId && sessionStore.isAuthenticated && sessionStore.userId === userId;
+}
+
+function isCurrentPostsRequest(requestId: number, collectionRequestId: number, collectionId: number, userId: number) {
+  return (
+    requestId === postsRequestId &&
+    collectionRequestId === collectionsRequestId &&
+    sessionStore.isAuthenticated &&
+    sessionStore.userId === userId &&
+    activeCollection.value?.collectionId === collectionId
+  );
+}
+
 function categoryFor(post: PostSummary): TopicCategory {
   return categories.value[post.categoryCode] ?? { code: post.categoryCode, name: post.categoryCode, description: '', accent: '#0f766e' };
 }
 
-async function loadLearningMemory() {
+function resetCollections() {
+  postsRequestId += 1;
+  collections.value = [];
+  posts.value = [];
+  interestTags.value = [];
+  activeCollectionId.value = null;
+  activeTag.value = '';
+  expandedReasons.value = null;
+  errorMessage.value = '';
+  loading.value = false;
+  postLoading.value = false;
+  form.name = '';
+  form.description = '';
+  form.visibility = 'PRIVATE';
+}
+
+async function loadLearningMemory(requestId: number, userId: number) {
   try {
     const memory = await getLearningMemory();
-    interestTags.value = memory.interestTags ?? [];
+    if (isCurrentCollectionsRequest(requestId, userId)) {
+      interestTags.value = memory.interestTags ?? [];
+    }
   } catch {
-    interestTags.value = [];
+    if (isCurrentCollectionsRequest(requestId, userId)) {
+      interestTags.value = [];
+    }
   }
 }
 
 async function loadCollections() {
-  if (!sessionStore.isAuthenticated) {
+  const requestId = ++collectionsRequestId;
+  const userId = sessionStore.userId;
+
+  if (!sessionStore.isAuthenticated || userId === null) {
+    resetCollections();
     return;
   }
+
   loading.value = true;
   errorMessage.value = '';
 
   try {
-    await loadLearningMemory();
-    collections.value = await getMyCollections();
-    activeCollectionId.value = activeCollectionId.value ?? collections.value[0]?.collectionId ?? null;
-    await loadPosts();
+    await loadLearningMemory(requestId, userId);
+    const collectionData = await getMyCollections();
+
+    if (!isCurrentCollectionsRequest(requestId, userId)) {
+      return;
+    }
+
+    collections.value = collectionData;
+    if (!collectionData.some((collection) => collection.collectionId === activeCollectionId.value)) {
+      activeCollectionId.value = collectionData[0]?.collectionId ?? null;
+    }
+    await loadPosts(requestId);
   } catch (error) {
+    if (!isCurrentCollectionsRequest(requestId, userId)) {
+      return;
+    }
     if (error instanceof ApiError && error.code === 4010) {
       await sessionStore.logout();
       errorMessage.value = copy.value.expired;
@@ -174,26 +233,52 @@ async function loadCollections() {
     }
     errorMessage.value = error instanceof Error ? error.message : copy.value.loadFailed;
   } finally {
-    loading.value = false;
+    if (isCurrentCollectionsRequest(requestId, userId)) {
+      loading.value = false;
+    }
   }
 }
 
-async function loadPosts() {
+async function loadPosts(collectionRequestId = collectionsRequestId) {
+  const requestId = ++postsRequestId;
+  const userId = sessionStore.userId;
+
+  if (!sessionStore.isAuthenticated || userId === null) {
+    resetCollections();
+    return;
+  }
+
+  if (collectionRequestId !== collectionsRequestId) {
+    return;
+  }
+
   if (!activeCollection.value) {
     posts.value = [];
+    postLoading.value = false;
     return;
   }
 
   postLoading.value = true;
+  const collectionId = activeCollection.value.collectionId;
   try {
-    posts.value = await getCollectionPosts(activeCollection.value.collectionId, preferencesStore.languageCode, {
+    const postData = await getCollectionPosts(collectionId, preferencesStore.languageCode, {
       sort: sortMode.value,
       tag: activeTag.value || undefined
     });
+
+    if (!isCurrentPostsRequest(requestId, collectionRequestId, collectionId, userId)) {
+      return;
+    }
+
+    posts.value = postData;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : copy.value.openFailed;
+    if (isCurrentPostsRequest(requestId, collectionRequestId, collectionId, userId)) {
+      errorMessage.value = error instanceof Error ? error.message : copy.value.openFailed;
+    }
   } finally {
-    postLoading.value = false;
+    if (isCurrentPostsRequest(requestId, collectionRequestId, collectionId, userId)) {
+      postLoading.value = false;
+    }
   }
 }
 
@@ -265,7 +350,7 @@ function toggleReasons(postId: number) {
 onMounted(loadCollections);
 
 watch(
-  () => [sessionStore.isAuthenticated, preferencesStore.languageCode],
+  () => [sessionStore.isAuthenticated, sessionStore.userId, preferencesStore.languageCode],
   () => loadCollections()
 );
 </script>
@@ -277,6 +362,12 @@ watch(
       <h1>{{ copy.title }}</h1>
       <p>{{ copy.desc }}</p>
     </div>
+
+    <nav class="study-subnav" :aria-label="copy.title">
+      <RouterLink to="/library">{{ copy.studyOverview }}</RouterLink>
+      <RouterLink to="/favorites">{{ copy.collectionsNav }}</RouterLink>
+      <RouterLink to="/memory">{{ copy.memoryNav }}</RouterLink>
+    </nav>
 
     <div v-if="!sessionStore.isAuthenticated" class="login-required">
       <BookmarkCheck :size="42" />
@@ -300,9 +391,13 @@ watch(
           <span>{{ copy.savedCount }}</span>
           <strong>{{ totalSaved }}</strong>
         </div>
-        <RouterLink class="secondary-button" to="/memory">
+        <RouterLink class="secondary-button" :to="{ path: '/memory', query: { from: 'favorites' } }">
           <Settings :size="17" />
           <span>{{ copy.memory }}</span>
+        </RouterLink>
+        <RouterLink class="secondary-button" to="/library">
+          <NotebookTabs :size="17" />
+          <span>{{ copy.studyOverview }}</span>
         </RouterLink>
         <button class="secondary-button" type="button" :disabled="loading" @click="loadCollections">
           <RefreshCw :size="17" />

@@ -2498,6 +2498,46 @@ meter::-webkit-meter-optimum-value {
   justify-content: space-between;
 }
 
+.study-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: -4px;
+}
+
+.study-subnav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s var(--ease);
+}
+
+.study-subnav a.router-link-active,
+.study-subnav a:hover {
+  border-color: rgba(15, 118, 110, 0.35);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.study-subnav a:hover {
+  transform: translateY(-1px);
+}
+
 .login-required {
   display: grid;
   place-items: center;
@@ -2539,7 +2579,7 @@ meter::-webkit-meter-optimum-value {
 
 .library-dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(130px, 168px));
+  grid-template-columns: minmax(360px, 1fr) repeat(3, minmax(128px, 158px));
   gap: 14px;
   align-items: stretch;
 }
@@ -2557,10 +2597,11 @@ meter::-webkit-meter-optimum-value {
 
 .library-focus-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: end;
-  min-height: 188px;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-content: space-between;
+  align-items: stretch;
+  min-height: 226px;
   padding: 22px;
   overflow: hidden;
   background:
@@ -2593,15 +2634,13 @@ meter::-webkit-meter-optimum-value {
 }
 
 .focus-copy h2 {
-  display: -webkit-box;
-  max-width: 680px;
-  overflow: hidden;
+  max-width: 100%;
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 850;
-  line-height: 1.18;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .focus-copy p,
@@ -2613,24 +2652,30 @@ meter::-webkit-meter-optimum-value {
 }
 
 .focus-copy p {
-  display: -webkit-box;
-  max-width: 680px;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .focus-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.focus-actions .primary-button,
+.focus-actions .secondary-button {
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .library-stat-card {
   display: grid;
   align-content: space-between;
-  min-height: 188px;
+  min-height: 226px;
   padding: 18px;
 }
 
@@ -4755,9 +4800,14 @@ meter::-webkit-meter-optimum-value {
 
 .favorites-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) repeat(3, max-content);
   gap: 12px;
   align-items: stretch;
+}
+
+.favorites-summary > .secondary-button,
+.favorites-summary > button {
+  align-self: center;
 }
 
 .favorites-summary > div {

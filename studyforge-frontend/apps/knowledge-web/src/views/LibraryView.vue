@@ -61,7 +61,10 @@ const copy = computed(() =>
         historyEmptyDesc: 'Open a post detail page and recent reads will be recorded automatically.',
         reviewSection: 'Review Cards',
         reviewEmpty: 'No review cards yet',
-        reviewEmptyDesc: 'Generate review cards from a post detail page and they will be stored here.'
+        reviewEmptyDesc: 'Generate review cards from a post detail page and they will be stored here.',
+        studyOverview: 'My Study',
+        collectionsNav: 'Collections',
+        memoryNav: 'MEMORY.md'
       }
     : {
         title: '我的学习',
@@ -98,7 +101,10 @@ const copy = computed(() =>
         historyEmptyDesc: '打开文章详情后，最近读过会自动记录。',
         reviewSection: '复习卡片',
         reviewEmpty: '还没有复习卡片',
-        reviewEmptyDesc: '在文章详情页生成复习卡片后，会保存到这里。'
+        reviewEmptyDesc: '在文章详情页生成复习卡片后，会保存到这里。',
+        studyOverview: '我的学习',
+        collectionsNav: '收藏夹',
+        memoryNav: 'MEMORY.md'
       }
 );
 
@@ -109,10 +115,29 @@ const category: TopicCategory = {
   accent: '#0f766e'
 };
 
+let libraryRequestId = 0;
+
+function isCurrentLibraryRequest(requestId: number, userId: number) {
+  return requestId === libraryRequestId && sessionStore.isAuthenticated && sessionStore.userId === userId;
+}
+
+function resetLibrary() {
+  favorites.value = [];
+  history.value = [];
+  reviewCards.value = [];
+  errorMessage.value = '';
+  loading.value = false;
+}
+
 async function loadLibrary() {
-  if (!sessionStore.isAuthenticated) {
+  const requestId = ++libraryRequestId;
+  const userId = sessionStore.userId;
+
+  if (!sessionStore.isAuthenticated || userId === null) {
+    resetLibrary();
     return;
   }
+
   loading.value = true;
   errorMessage.value = '';
 
@@ -122,20 +147,29 @@ async function loadLibrary() {
       getHistoryPosts(preferencesStore.languageCode),
       getMyReviewCards()
     ]);
+
+    if (!isCurrentLibraryRequest(requestId, userId)) {
+      return;
+    }
+
     favorites.value = favoriteData;
     history.value = historyData;
     reviewCards.value = cardData;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
+    if (isCurrentLibraryRequest(requestId, userId)) {
+      errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
+    }
   } finally {
-    loading.value = false;
+    if (isCurrentLibraryRequest(requestId, userId)) {
+      loading.value = false;
+    }
   }
 }
 
 onMounted(loadLibrary);
 
 watch(
-  () => [sessionStore.isAuthenticated, preferencesStore.languageCode],
+  () => [sessionStore.isAuthenticated, sessionStore.userId, preferencesStore.languageCode],
   () => loadLibrary()
 );
 </script>
@@ -146,6 +180,12 @@ watch(
       <span class="section-kicker">My Study</span>
       <h1>{{ copy.title }}</h1>
     </div>
+
+    <nav class="study-subnav" :aria-label="copy.title">
+      <RouterLink to="/library">{{ copy.studyOverview }}</RouterLink>
+      <RouterLink to="/favorites">{{ copy.collectionsNav }}</RouterLink>
+      <RouterLink to="/memory">{{ copy.memoryNav }}</RouterLink>
+    </nav>
 
     <div v-if="!sessionStore.isAuthenticated" class="login-required">
       <NotebookTabs :size="42" />
@@ -178,7 +218,7 @@ watch(
               <BookmarkCheck :size="17" />
               <span>{{ copy.organizeCollections }}</span>
             </RouterLink>
-            <RouterLink class="secondary-button" to="/memory">
+            <RouterLink class="secondary-button" :to="{ path: '/memory', query: { from: 'library' } }">
               <NotebookTabs :size="17" />
               <span>MEMORY.md</span>
             </RouterLink>
