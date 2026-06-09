@@ -111,6 +111,7 @@ const copy = computed(() => {
       favorited: 'saved a post',
       openContent: 'Open content',
       calls: 'calls',
+      aiUsageTab: 'AI Usage',
       aiUsageTitle: 'AI Usage Statistics',
       noAiUsage: 'No AI usage records',
       totalCalls: 'Total Calls',
@@ -180,6 +181,7 @@ const copy = computed(() => {
     favorited: '收藏了帖子',
     openContent: '打开',
     calls: '次',
+    aiUsageTab: 'AI 用量',
     aiUsageTitle: 'AI 使用统计',
     noAiUsage: '暂无 AI 使用记录',
     totalCalls: '总调用次数',
@@ -412,6 +414,7 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
         <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">动态</button>
         <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">投稿</button>
         <button type="button" :class="{ active: activeTab === 'friends' }" @click="activeTab = 'friends'">好友</button>
+        <button v-if="profile.self" type="button" :class="{ active: activeTab === 'ai-usage' }" @click="activeTab = 'ai-usage'">{{ copy.aiUsageTab }}</button>
       </nav>
 
       <section v-if="activeTab === 'activity'" class="profile-content-grid">
