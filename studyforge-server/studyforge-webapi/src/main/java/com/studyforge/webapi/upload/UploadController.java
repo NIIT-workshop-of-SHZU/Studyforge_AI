@@ -31,16 +31,20 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1")
 public class UploadController {
     private static final long MAX_IMAGE_SIZE = 8L * 1024L * 1024L;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final long MAX_HOMEPAGE_MEDIA_SIZE = 50L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final Set<String> ALLOWED_HOMEPAGE_MEDIA_EXTENSIONS = Set.of("gif", "mp4", "webm");
 
     private final AuthService authService;
     private final UploadedFileService uploadedFileService;
     private final Path imageRoot;
+    private final Path homepageMediaRoot;
 
     public UploadController(AuthService authService, UploadedFileService uploadedFileService) {
         this.authService = authService;
         this.uploadedFileService = uploadedFileService;
         this.imageRoot = UploadStorage.imageRoot();
+        this.homepageMediaRoot = UploadStorage.homepageMediaRoot();
     }
 
     @PostMapping(value = "/uploads/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -55,7 +59,7 @@ public class UploadController {
         }
 
         String extension = extension(file.getOriginalFilename());
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+        if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "only jpg, png, webp and gif images are supported");
         }
 
@@ -77,28 +81,68 @@ public class UploadController {
                 file.getSize()
         );
 
-        return ApiResponse.success(new UploadedFileVO(
-                uploadedFile.getFileId(),
-                uploadedFile.getOriginalFilename(),
-                uploadedFile.getStoredFilename(),
-                uploadedFile.getFileUrl(),
-                uploadedFile.getContentType(),
-                uploadedFile.getFileSize()
-        ));
+        return ApiResponse.success(toUploadedFileVO(uploadedFile));
+    }
+
+    @PostMapping(value = "/uploads/homepage-media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UploadedFileVO> uploadHomepageMedia(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                                           @RequestParam("file") MultipartFile file) throws IOException {
+        Long userId = authService.requireUserId(authorization);
+        if (file == null || file.isEmpty()) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "homepage media file is required");
+        }
+        if (file.getSize() > MAX_HOMEPAGE_MEDIA_SIZE) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "homepage media is too large");
+        }
+
+        String extension = extension(file.getOriginalFilename());
+        if (!ALLOWED_HOMEPAGE_MEDIA_EXTENSIONS.contains(extension)) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "only gif, mp4 and webm homepage media are supported");
+        }
+        validateHomepageMediaContentType(extension, file.getContentType());
+
+        Files.createDirectories(homepageMediaRoot);
+        String filename = UUID.randomUUID() + "." + extension;
+        Path target = homepageMediaRoot.resolve(filename).normalize();
+        if (!target.startsWith(homepageMediaRoot)) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "invalid file path");
+        }
+        file.transferTo(target);
+
+        String url = "/api/v1/files/homepage-media/" + filename;
+        UploadedFile uploadedFile = uploadedFileService.recordHomepageMedia(
+                userId,
+                file.getOriginalFilename(),
+                filename,
+                url,
+                file.getContentType(),
+                file.getSize()
+        );
+
+        return ApiResponse.success(toUploadedFileVO(uploadedFile));
     }
 
     @GetMapping("/files/images/{filename}")
     public ResponseEntity<ByteArrayResource> image(@PathVariable("filename") String filename) throws IOException {
+        return file(filename, imageRoot, "image");
+    }
+
+    @GetMapping("/files/homepage-media/{filename}")
+    public ResponseEntity<ByteArrayResource> homepageMedia(@PathVariable("filename") String filename) throws IOException {
+        return file(filename, homepageMediaRoot, "homepage media");
+    }
+
+    private ResponseEntity<ByteArrayResource> file(String filename, Path root, String label) throws IOException {
         if (filename == null || filename.contains("/") || filename.contains("\\")) {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "invalid filename");
         }
         UploadedFile uploadedFile = uploadedFileService.getByStoredFilename(filename);
         if (uploadedFile == null) {
-            throw new BizException(ErrorCode.NOT_FOUND, "image not found");
+            throw new BizException(ErrorCode.NOT_FOUND, label + " not found");
         }
-        Path file = imageRoot.resolve(filename).normalize();
-        if (!file.startsWith(imageRoot) || !Files.exists(file)) {
-            throw new BizException(ErrorCode.NOT_FOUND, "image not found");
+        Path file = root.resolve(filename).normalize();
+        if (!file.startsWith(root) || !Files.exists(file)) {
+            throw new BizException(ErrorCode.NOT_FOUND, label + " not found");
         }
 
         String contentType = uploadedFile.getContentType() == null ? Files.probeContentType(file) : uploadedFile.getContentType();
@@ -109,11 +153,38 @@ public class UploadController {
                 .body(new ByteArrayResource(Files.readAllBytes(file)));
     }
 
+    private void validateHomepageMediaContentType(String extension, String contentType) {
+        if (contentType == null || contentType.isBlank() || "application/octet-stream".equalsIgnoreCase(contentType)) {
+            return;
+        }
+        String normalized = contentType.toLowerCase(Locale.ROOT);
+        boolean supported = switch (extension) {
+            case "gif" -> normalized.startsWith("image/gif");
+            case "mp4" -> normalized.startsWith("video/mp4");
+            case "webm" -> normalized.startsWith("video/webm");
+            default -> false;
+        };
+        if (!supported) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "homepage media content type is unsupported");
+        }
+    }
+
     private String extension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "";
         }
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private UploadedFileVO toUploadedFileVO(UploadedFile uploadedFile) {
+        return new UploadedFileVO(
+                uploadedFile.getFileId(),
+                uploadedFile.getOriginalFilename(),
+                uploadedFile.getStoredFilename(),
+                uploadedFile.getFileUrl(),
+                uploadedFile.getContentType(),
+                uploadedFile.getFileSize()
+        );
     }
 
     public record UploadedFileVO(Long fileId,

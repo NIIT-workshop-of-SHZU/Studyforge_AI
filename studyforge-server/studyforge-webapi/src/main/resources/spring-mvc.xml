@@ -38,6 +38,9 @@
             <mvc:exclude-mapping path="/api/v1/users/*/followers"/>
             <mvc:exclude-mapping path="/api/v1/users/*/following"/>
             <mvc:exclude-mapping path="/api/v1/users/*/friends"/>
+            <mvc:exclude-mapping path="/api/v1/users/*/homepage"/>
+            <mvc:exclude-mapping path="/api/v1/community/homepages"/>
+            <mvc:exclude-mapping path="/api/v1/community/homepages/*"/>
             <mvc:exclude-mapping path="/api/v1/files/**"/>
             <mvc:exclude-mapping path="/api/v1/help"/>
             <mvc:exclude-mapping path="/api/v1/help/**"/>

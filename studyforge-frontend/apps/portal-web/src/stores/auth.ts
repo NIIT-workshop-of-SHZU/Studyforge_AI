@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.session?.accessToken),
-    username: (state) => state.session?.username || '未登录',
+    username: (state) => state.session?.username || 'Guest',
     role: (state) => state.session?.role || 'GUEST'
   },
   actions: {
@@ -28,6 +28,13 @@ export const useAuthStore = defineStore('auth', {
 
       this.session = readStoredSession();
       this.initialized = true;
+    },
+    syncFromStorage() {
+      this.session = readStoredSession();
+    },
+    resetSession() {
+      this.session = null;
+      clearStoredSession();
     },
     async login(payload: LoginRequest) {
       this.loading = true;
@@ -47,8 +54,7 @@ export const useAuthStore = defineStore('auth', {
           await authApi.logout();
         }
       } finally {
-        this.session = null;
-        clearStoredSession();
+        this.resetSession();
       }
     }
   }

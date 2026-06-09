@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { BookOpenCheck, Layers3 } from '@lucide/vue';
+import { usePreferencesStore } from '@/stores/preferences';
 import type { TopicCategory } from '@/types/api';
 
 defineProps<{
@@ -10,13 +12,26 @@ defineProps<{
 defineEmits<{
   select: [code: string];
 }>();
+
+const preferencesStore = usePreferencesStore();
+const copy = computed(() =>
+  preferencesStore.languageCode === 'en_US'
+    ? {
+        aria: 'Browse by topic',
+        title: 'Browse by Topic'
+      }
+    : {
+        aria: '按主题浏览',
+        title: '按主题浏览'
+      }
+);
 </script>
 
 <template>
-  <aside class="topic-rail" aria-label="按主题浏览">
+  <aside class="topic-rail" :aria-label="copy.aria">
     <div class="rail-title">
       <Layers3 :size="18" />
-      <span>按主题浏览</span>
+      <span>{{ copy.title }}</span>
     </div>
 
     <button

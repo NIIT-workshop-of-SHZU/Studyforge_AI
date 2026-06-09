@@ -73,6 +73,13 @@
           AND read_flag = 0
     </select>
 
+    <select id="selectReadFlag" resultType="int">
+        SELECT read_flag
+        FROM notifications
+        WHERE recipient_id = #{recipientId}
+          AND notification_id = #{notificationId}
+    </select>
+
     <update id="markRead">
         UPDATE notifications
         SET

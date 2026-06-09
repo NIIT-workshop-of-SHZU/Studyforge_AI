@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Flame, RefreshCw, Search } from '@lucide/vue';
 import { getTrendingPosts } from '@/api/posts';
@@ -14,6 +14,33 @@ const loading = ref(false);
 const errorMessage = ref('');
 const limit = ref(10);
 
+const copy = computed(() => {
+  if (preferencesStore.languageCode === 'en_US') {
+    return {
+      eyebrow: 'Content Library',
+      title: 'Content Feed',
+      limit: 'Limit',
+      refresh: 'Refresh',
+      loading: 'Loading content',
+      unavailable: 'Content is unavailable',
+      empty: 'No content yet',
+      emptyDesc: 'No articles are available in the current language.',
+      open: 'Open'
+    };
+  }
+  return {
+    eyebrow: 'Content Library',
+    title: '内容流',
+    limit: '显示数量',
+    refresh: '刷新',
+    loading: '正在整理内容',
+    unavailable: '内容暂时不可用',
+    empty: '暂无内容',
+    emptyDesc: '当前语言下还没有可展示的文章。',
+    open: '查看'
+  };
+});
+
 async function loadPosts() {
   loading.value = true;
   errorMessage.value = '';
@@ -24,7 +51,7 @@ async function loadPosts() {
       limit: limit.value
     });
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '内容列表暂时没取到';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
   } finally {
     loading.value = false;
   }
@@ -42,26 +69,26 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div class="section-heading">
-        <span>Content Library</span>
-        <h1>内容库</h1>
+        <span>{{ copy.eyebrow }}</span>
+        <h1>{{ copy.title }}</h1>
       </div>
 
       <div class="toolbar">
         <label class="inline-input">
           <Search :size="17" />
-          <span>显示数量</span>
+          <span>{{ copy.limit }}</span>
           <input v-model.number="limit" type="number" min="1" max="20" @change="loadPosts" />
         </label>
         <button class="secondary-button" type="button" :disabled="loading" @click="loadPosts">
           <RefreshCw :size="17" />
-          <span>刷新</span>
+          <span>{{ copy.refresh }}</span>
         </button>
       </div>
     </div>
 
-    <LoadingState v-if="loading" label="正在整理内容" />
-    <EmptyState v-else-if="errorMessage" title="内容暂时没取到" :description="errorMessage" />
-    <EmptyState v-else-if="posts.length === 0" title="暂无内容" description="当前语言下还没有可展示的文章" />
+    <LoadingState v-if="loading" :label="copy.loading" />
+    <EmptyState v-else-if="errorMessage" :title="copy.unavailable" :description="errorMessage" />
+    <EmptyState v-else-if="posts.length === 0" :title="copy.empty" :description="copy.emptyDesc" />
 
     <div v-else class="post-list">
       <article v-for="(post, index) in posts" :key="`${post.postId}-${index}`" class="post-item">
@@ -78,7 +105,7 @@ watch(
         </div>
 
         <RouterLink class="secondary-button stable-action" :to="`/posts/${post.postId}`">
-          查看
+          {{ copy.open }}
         </RouterLink>
       </article>
     </div>
