@@ -18,6 +18,7 @@ public class Post {
     private BigDecimal hotScore;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
+    private LocalDateTime activityTime;
 
     public Long getPostId() {
         return postId;
@@ -129,5 +130,13 @@ public class Post {
 
     public void setUpdatedTime(LocalDateTime updatedTime) {
         this.updatedTime = updatedTime;
+    }
+
+    public LocalDateTime getActivityTime() {
+        return activityTime;
+    }
+
+    public void setActivityTime(LocalDateTime activityTime) {
+        this.activityTime = activityTime;
     }
 }

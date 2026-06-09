@@ -11,6 +11,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 import type { AiLogItem, PostSummary, TopicCategory } from '@/types/api';
+import { toDate } from '@/utils/date';
 
 const sessionStore = useSessionStore();
 const preferencesStore = usePreferencesStore();
@@ -19,8 +20,11 @@ const history = ref<PostSummary[]>([]);
 const reviewCards = ref<AiLogItem[]>([]);
 const loading = ref(false);
 const errorMessage = ref('');
-const latestFavorite = computed(() => favorites.value[0] ?? null);
-const latestHistory = computed(() => history.value[0] ?? null);
+const localizedFavorites = computed(() => prioritizePosts(favorites.value));
+const localizedHistory = computed(() => prioritizePosts(history.value));
+const latestFavorite = computed(() => localizedFavorites.value[0] ?? null);
+const latestHistory = computed(() => localizedHistory.value[0] ?? null);
+const continuePost = computed(() => prioritizePosts([...history.value, ...favorites.value])[0] ?? null);
 const latestReviewCard = computed(() => reviewCards.value[0] ?? null);
 const totalSavedInteractions = computed(() => favorites.value.reduce((sum, post) => sum + post.favoriteCount + post.commentCount, 0));
 
@@ -61,7 +65,10 @@ const copy = computed(() =>
         historyEmptyDesc: 'Open a post detail page and recent reads will be recorded automatically.',
         reviewSection: 'Review Cards',
         reviewEmpty: 'No review cards yet',
-        reviewEmptyDesc: 'Generate review cards from a post detail page and they will be stored here.'
+        reviewEmptyDesc: 'Generate review cards from a post detail page and they will be stored here.',
+        studyOverview: 'My Study',
+        collectionsNav: 'Collections',
+        memoryNav: 'MEMORY.md'
       }
     : {
         title: '我的学习',
@@ -98,21 +105,63 @@ const copy = computed(() =>
         historyEmptyDesc: '打开文章详情后，最近读过会自动记录。',
         reviewSection: '复习卡片',
         reviewEmpty: '还没有复习卡片',
-        reviewEmptyDesc: '在文章详情页生成复习卡片后，会保存到这里。'
+        reviewEmptyDesc: '在文章详情页生成复习卡片后，会保存到这里。',
+        studyOverview: '我的学习',
+        collectionsNav: '收藏夹',
+        memoryNav: 'MEMORY.md'
       }
 );
 
-const category: TopicCategory = {
+const category = computed<TopicCategory>(() => ({
   code: 'STUDY',
   name: preferencesStore.languageCode === 'en_US' ? 'My Study' : '我的内容',
   description: preferencesStore.languageCode === 'en_US' ? 'Saved content' : '已保存',
   accent: '#0f766e'
-};
+}));
+
+let libraryRequestId = 0;
+
+function isCurrentLibraryRequest(requestId: number, userId: number) {
+  return requestId === libraryRequestId && sessionStore.isAuthenticated && sessionStore.userId === userId;
+}
+
+function resetLibrary() {
+  favorites.value = [];
+  history.value = [];
+  reviewCards.value = [];
+  errorMessage.value = '';
+  loading.value = false;
+}
+
+function isPreferredLanguage(post: PostSummary) {
+  return post.languageCode === preferencesStore.languageCode;
+}
+
+function prioritizePosts(posts: PostSummary[]) {
+  return posts
+    .map((post, index) => ({ post, index }))
+    .sort(
+      (first, second) =>
+        Number(!isPreferredLanguage(first.post)) - Number(!isPreferredLanguage(second.post)) ||
+        postTimestamp(second.post) - postTimestamp(first.post) ||
+        first.index - second.index
+    )
+    .map(({ post }) => post);
+}
+
+function postTimestamp(post: PostSummary) {
+  return toDate(post.activityTime ?? post.createdTime)?.getTime() ?? 0;
+}
 
 async function loadLibrary() {
-  if (!sessionStore.isAuthenticated) {
+  const requestId = ++libraryRequestId;
+  const userId = sessionStore.userId;
+
+  if (!sessionStore.isAuthenticated || userId === null) {
+    resetLibrary();
     return;
   }
+
   loading.value = true;
   errorMessage.value = '';
 
@@ -122,20 +171,29 @@ async function loadLibrary() {
       getHistoryPosts(preferencesStore.languageCode),
       getMyReviewCards()
     ]);
+
+    if (!isCurrentLibraryRequest(requestId, userId)) {
+      return;
+    }
+
     favorites.value = favoriteData;
     history.value = historyData;
     reviewCards.value = cardData;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
+    if (isCurrentLibraryRequest(requestId, userId)) {
+      errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
+    }
   } finally {
-    loading.value = false;
+    if (isCurrentLibraryRequest(requestId, userId)) {
+      loading.value = false;
+    }
   }
 }
 
 onMounted(loadLibrary);
 
 watch(
-  () => [sessionStore.isAuthenticated, preferencesStore.languageCode],
+  () => [sessionStore.isAuthenticated, sessionStore.userId, preferencesStore.languageCode],
   () => loadLibrary()
 );
 </script>
@@ -146,6 +204,12 @@ watch(
       <span class="section-kicker">My Study</span>
       <h1>{{ copy.title }}</h1>
     </div>
+
+    <nav class="study-subnav" :aria-label="copy.title">
+      <RouterLink to="/library">{{ copy.studyOverview }}</RouterLink>
+      <RouterLink to="/favorites">{{ copy.collectionsNav }}</RouterLink>
+      <RouterLink to="/memory">{{ copy.memoryNav }}</RouterLink>
+    </nav>
 
     <div v-if="!sessionStore.isAuthenticated" class="login-required">
       <NotebookTabs :size="42" />
@@ -162,14 +226,14 @@ watch(
         <section class="library-focus-panel">
           <div class="focus-copy">
             <span>{{ copy.continueTitle }}</span>
-            <h2>{{ latestHistory?.title || latestFavorite?.title || copy.continueFallbackTitle }}</h2>
-            <p>{{ latestHistory?.summary || latestFavorite?.summary || copy.continueFallbackDesc }}</p>
+            <h2>{{ continuePost?.title || copy.continueFallbackTitle }}</h2>
+            <p>{{ continuePost?.summary || copy.continueFallbackDesc }}</p>
           </div>
           <div class="focus-actions">
             <RouterLink
-              v-if="latestHistory || latestFavorite"
+              v-if="continuePost"
               class="primary-button"
-              :to="{ path: `/posts/${(latestHistory || latestFavorite)?.postId}`, query: { language: (latestHistory || latestFavorite)?.languageCode } }"
+              :to="{ path: `/posts/${continuePost.postId}`, query: { language: continuePost.languageCode } }"
             >
               <BookOpen :size="17" />
               <span>{{ copy.continueReading }}</span>
@@ -177,6 +241,10 @@ watch(
             <RouterLink class="secondary-button" to="/favorites">
               <BookmarkCheck :size="17" />
               <span>{{ copy.organizeCollections }}</span>
+            </RouterLink>
+            <RouterLink class="secondary-button" :to="{ path: '/memory', query: { from: 'library' } }">
+              <NotebookTabs :size="17" />
+              <span>MEMORY.md</span>
             </RouterLink>
           </div>
         </section>
@@ -250,16 +318,16 @@ watch(
     <section v-if="sessionStore.isAuthenticated && !loading" class="library-sections">
       <div class="library-section">
         <h2>{{ copy.savedSection }}</h2>
-        <div v-if="favorites.length" class="knowledge-grid compact-grid">
-          <KnowledgeCard v-for="(post, index) in favorites" :key="post.postId" :post="post" :category="category" :index="index" />
+        <div v-if="localizedFavorites.length" class="knowledge-grid compact-grid">
+          <KnowledgeCard v-for="(post, index) in localizedFavorites" :key="post.postId" :post="post" :category="category" :index="index" />
         </div>
         <EmptyState v-else :title="copy.savedEmpty" :description="copy.savedEmptyDesc" />
       </div>
 
       <div class="library-section">
         <h2>{{ copy.historySection }}</h2>
-        <div v-if="history.length" class="knowledge-grid compact-grid">
-          <KnowledgeCard v-for="(post, index) in history" :key="`history-${post.postId}-${index}`" :post="post" :category="category" :index="index" />
+        <div v-if="localizedHistory.length" class="knowledge-grid compact-grid">
+          <KnowledgeCard v-for="(post, index) in localizedHistory" :key="`history-${post.postId}-${index}`" :post="post" :category="category" :index="index" />
         </div>
         <EmptyState v-else :title="copy.historyEmpty" :description="copy.historyEmptyDesc" />
       </div>

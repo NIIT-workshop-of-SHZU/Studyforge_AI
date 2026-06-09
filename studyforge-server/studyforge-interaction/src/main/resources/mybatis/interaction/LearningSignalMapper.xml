@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.interaction.learning.mapper.LearningSignalMapper">
+    <resultMap id="FavoriteItemRankRowMap" type="com.studyforge.interaction.learning.entity.FavoriteItemRankRow">
+        <id column="id" property="id"/>
+        <result column="collection_id" property="collectionId"/>
+        <result column="post_id" property="postId"/>
+        <result column="user_id" property="userId"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="importance_score" property="importanceScore"/>
+        <result column="pinned" property="pinned"/>
+        <result column="score_factors" property="scoreFactors"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="ai_tags" property="aiTags"/>
+        <result column="title" property="title"/>
+        <result column="summary" property="summary"/>
+        <result column="original_language" property="originalLanguage"/>
+    </resultMap>
+
+    <sql id="CollectionItemSelect">
+        SELECT
+            i.id,
+            i.collection_id,
+            i.post_id,
+            i.user_id,
+            i.created_time,
+            i.importance_score,
+            i.pinned,
+            i.score_factors,
+            p.category_id,
+            COALESCE(pi.ai_tags, pi_fallback.ai_tags) AS ai_tags,
+            COALESCE(pi.title, pi_fallback.title) AS title,
+            COALESCE(pi.summary, pi_fallback.summary) AS summary,
+            p.original_language
+        FROM favorite_collection_items i
+        JOIN favorite_collections fc ON fc.collection_id = i.collection_id
+        JOIN posts p ON p.post_id = i.post_id
+        LEFT JOIN post_i18n pi
+            ON pi.post_id = i.post_id
+           AND pi.language_code = #{languageCode}
+        LEFT JOIN post_i18n pi_fallback
+            ON pi_fallback.post_id = i.post_id
+           AND pi_fallback.language_code = p.original_language
+        WHERE i.user_id = #{userId}
+          AND i.collection_id = #{collectionId}
+          AND fc.user_id = #{userId}
+          AND p.status = 'PUBLISHED'
+    </sql>
+
+    <select id="selectCollectionItems" resultMap="FavoriteItemRankRowMap">
+        <include refid="CollectionItemSelect"/>
+        <if test="tag != null and tag != ''">
+            AND (
+                LOWER(COALESCE(pi.ai_tags, pi_fallback.ai_tags, '')) LIKE CONCAT('%', LOWER(#{tag}), '%')
+                OR LOWER(COALESCE(pi.title, pi_fallback.title, '')) LIKE CONCAT('%', LOWER(#{tag}), '%')
+                OR LOWER(COALESCE(pi.summary, pi_fallback.summary, '')) LIKE CONCAT('%', LOWER(#{tag}), '%')
+            )
+        </if>
+        <choose>
+            <when test="sort == 'recent'">
+                ORDER BY i.created_time DESC
+            </when>
+            <otherwise>
+                ORDER BY i.pinned DESC, i.importance_score DESC, i.created_time DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectAllItemsByUser" resultMap="FavoriteItemRankRowMap">
+        SELECT
+            i.id,
+            i.collection_id,
+            i.post_id,
+            i.user_id,
+            i.created_time,
+            i.importance_score,
+            i.pinned,
+            i.score_factors,
+            p.category_id,
+            COALESCE(pi.ai_tags, pi_fallback.ai_tags) AS ai_tags,
+            COALESCE(pi.title, pi_fallback.title) AS title,
+            COALESCE(pi.summary, pi_fallback.summary) AS summary,
+            p.original_language
+        FROM favorite_collection_items i
+        JOIN posts p ON p.post_id = i.post_id
+        LEFT JOIN post_i18n pi
+            ON pi.post_id = i.post_id
+           AND pi.language_code = #{languageCode}
+        LEFT JOIN post_i18n pi_fallback
+            ON pi_fallback.post_id = i.post_id
+           AND pi_fallback.language_code = p.original_language
+        WHERE i.user_id = #{userId}
+          AND p.status = 'PUBLISHED'
+    </select>
+
+    <select id="countViews" resultType="int">
+        SELECT COUNT(*)
+        FROM post_view_history
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <select id="countAiEngagement" resultType="int">
+        SELECT COUNT(*)
+        FROM ai_logs
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+          AND ai_type IN ('SUMMARY', 'REVIEW_CARD', 'QUESTION')
+          AND success = 1
+    </select>
+
+    <select id="countCollectionsForPost" resultType="int">
+        SELECT COUNT(DISTINCT collection_id)
+        FROM favorite_collection_items
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <select id="selectTopCategoryIds" resultType="long">
+        SELECT p.category_id
+        FROM favorite_collection_items i
+        JOIN posts p ON p.post_id = i.post_id
+        WHERE i.user_id = #{userId}
+          AND p.status = 'PUBLISHED'
+        GROUP BY p.category_id
+        ORDER BY COUNT(*) DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectFavoriteAiTagLines" resultType="string">
+        SELECT DISTINCT COALESCE(pi.ai_tags, pi_fallback.ai_tags) AS ai_tags
+        FROM favorite_collection_items i
+        JOIN posts p ON p.post_id = i.post_id
+        LEFT JOIN post_i18n pi
+            ON pi.post_id = i.post_id
+           AND pi.language_code = #{languageCode}
+        LEFT JOIN post_i18n pi_fallback
+            ON pi_fallback.post_id = i.post_id
+           AND pi_fallback.language_code = p.original_language
+        WHERE i.user_id = #{userId}
+          AND p.status = 'PUBLISHED'
+          AND COALESCE(pi.ai_tags, pi_fallback.ai_tags) IS NOT NULL
+          AND COALESCE(pi.ai_tags, pi_fallback.ai_tags) != ''
+    </select>
+
+    <select id="selectTopFavoriteTitles" resultType="string">
+        SELECT COALESCE(pi.title, pi_fallback.title) AS title
+        FROM favorite_collection_items i
+        JOIN posts p ON p.post_id = i.post_id
+        LEFT JOIN post_i18n pi
+            ON pi.post_id = i.post_id
+           AND pi.language_code = #{languageCode}
+        LEFT JOIN post_i18n pi_fallback
+            ON pi_fallback.post_id = i.post_id
+           AND pi_fallback.language_code = p.original_language
+        WHERE i.user_id = #{userId}
+          AND p.status = 'PUBLISHED'
+        ORDER BY i.importance_score DESC, i.created_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="updateItemScore">
+        UPDATE favorite_collection_items
+        SET importance_score = #{importanceScore},
+            score_factors = #{scoreFactors}
+        WHERE collection_id = #{collectionId}
+          AND post_id = #{postId}
+          AND user_id = #{userId}
+    </update>
+
+    <update id="updateItemPinned">
+        UPDATE favorite_collection_items
+        SET pinned = #{pinned}
+        WHERE collection_id = #{collectionId}
+          AND post_id = #{postId}
+          AND user_id = #{userId}
+    </update>
+</mapper>

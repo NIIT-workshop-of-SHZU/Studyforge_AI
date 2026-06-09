@@ -12,6 +12,8 @@
         <result column="content" property="content"/>
         <result column="content_format" property="contentFormat"/>
         <result column="ai_tags" property="aiTags"/>
+        <result column="semantic_tags_json" property="semanticTagsJson"/>
+        <result column="semantic_tags_fingerprint" property="semanticTagsFingerprint"/>
         <result column="source_type" property="sourceType"/>
     </resultMap>
 
@@ -24,6 +26,8 @@
         content,
         content_format,
         ai_tags,
+        semantic_tags_json,
+        semantic_tags_fingerprint,
         source_type
     </sql>
 
@@ -78,5 +82,13 @@
             ai_tags = #{aiTags},
             source_type = #{sourceType}
         WHERE id = #{id}
+    </update>
+
+    <update id="updateSemanticTags">
+        UPDATE post_i18n
+        SET semantic_tags_json = #{semanticTagsJson},
+            semantic_tags_fingerprint = #{semanticTagsFingerprint}
+        WHERE post_id = #{postId}
+          AND language_code = #{languageCode}
     </update>
 </mapper>

@@ -14,6 +14,8 @@ import com.studyforge.common.exception.BizException;
 import com.studyforge.common.exception.ErrorCode;
 import com.studyforge.content.service.PostQueryService;
 import com.studyforge.content.vo.PostDetailVO;
+import com.studyforge.interaction.learning.service.FavoriteImportanceService;
+import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.system.service.AuthService;
 import com.studyforge.system.service.UploadedFileService;
 import com.studyforge.webapi.support.UploadStorage;
@@ -40,6 +42,8 @@ public class AiController {
     private final PostQueryService postQueryService;
     private final AuthService authService;
     private final UploadedFileService uploadedFileService;
+    private final UserLearningProfileService userLearningProfileService;
+    private final FavoriteImportanceService favoriteImportanceService;
     private final AiTokenBillingService tokenBillingService;
     private final AiTokenUsageLogger tokenUsageLogger;
     private final Path imageRoot;
@@ -49,6 +53,8 @@ public class AiController {
                         PostQueryService postQueryService,
                         AuthService authService,
                         UploadedFileService uploadedFileService,
+                        UserLearningProfileService userLearningProfileService,
+                        FavoriteImportanceService favoriteImportanceService,
                         AiTokenBillingService tokenBillingService,
                         AiTokenUsageLogger tokenUsageLogger) {
         this.aiService = aiService;
@@ -56,6 +62,8 @@ public class AiController {
         this.postQueryService = postQueryService;
         this.authService = authService;
         this.uploadedFileService = uploadedFileService;
+        this.userLearningProfileService = userLearningProfileService;
+        this.favoriteImportanceService = favoriteImportanceService;
         this.tokenBillingService = tokenBillingService;
         this.tokenUsageLogger = tokenUsageLogger;
         this.imageRoot = UploadStorage.imageRoot();
@@ -69,24 +77,22 @@ public class AiController {
         String contentLanguage = contentLanguage(request);
         String promptLanguage = promptLanguage(request);
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        
-        // 使用计费服务调用 API（获取完整响应）
-        String prompt = buildSummaryPrompt(post.content(), promptLanguage);
+        String userContext = userLearningProfileService.getMemoryContext(userId);
+
+        String prompt = buildSummaryPrompt(post.content(), promptLanguage, userContext);
         String fullResponse = tokenBillingService.callApiWithUsage(prompt);
-        
+
         if (fullResponse != null) {
             String text = tokenBillingService.extractTextFromResponse(fullResponse);
             Long logId = logWithId(userId, postId, "SUMMARY", post.content(), text, 1);
-            if (logId != null) {
-                String modelName = tokenBillingService.getCurrentModel();
-                tokenUsageLogger.logTokenUsage(logId, fullResponse, modelName);
-            }
+            logTokenUsage(logId, fullResponse);
+            favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
             return ApiResponse.success(new AiResultVO("SUMMARY", promptLanguage, text));
         }
-        
-        // 降级到原生 AiService
-        String fallbackText = aiService.generateSummary(post.content(), promptLanguage);
+
+        String fallbackText = aiService.generateSummary(post.content(), promptLanguage, userContext);
         log(userId, postId, "SUMMARY", post.content(), fallbackText, 0);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("SUMMARY", promptLanguage, fallbackText));
     }
 
@@ -98,23 +104,22 @@ public class AiController {
         String contentLanguage = contentLanguage(request);
         String promptLanguage = promptLanguage(request);
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        
-        String prompt = buildQuizPrompt(post.content(), promptLanguage);
+        String userContext = userLearningProfileService.getMemoryContext(userId);
+
+        String prompt = buildQuizPrompt(post.content(), promptLanguage, userContext);
         String fullResponse = tokenBillingService.callApiWithUsage(prompt);
-        
+
         if (fullResponse != null) {
             String text = tokenBillingService.extractTextFromResponse(fullResponse);
             Long logId = logWithId(userId, postId, "REVIEW_CARD", post.content(), text, 1);
-            if (logId != null) {
-                String modelName = tokenBillingService.getCurrentModel();
-                tokenUsageLogger.logTokenUsage(logId, fullResponse, modelName);
-            }
+            logTokenUsage(logId, fullResponse);
+            favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
             return ApiResponse.success(new AiResultVO("REVIEW_CARD", promptLanguage, text));
         }
-        
-        // 降级到原生 AiService
-        String fallbackText = aiService.generateQuiz(post.content(), promptLanguage);
+
+        String fallbackText = aiService.generateQuiz(post.content(), promptLanguage, userContext);
         log(userId, postId, "REVIEW_CARD", post.content(), fallbackText, 0);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("REVIEW_CARD", promptLanguage, fallbackText));
     }
 
@@ -126,24 +131,22 @@ public class AiController {
         String contentLanguage = request == null || isBlank(request.contentLanguageCode()) ? answerLanguage(request) : request.contentLanguageCode();
         String promptLanguage = request == null || isBlank(request.promptLanguageCode()) ? answerLanguage(request) : request.promptLanguageCode();
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        
+        String userContext = userLearningProfileService.getMemoryContext(userId);
         String question = request == null ? "" : request.question();
-        String prompt = buildQuestionPrompt(post.content(), question, promptLanguage);
+        String prompt = buildQuestionPrompt(post.content(), question, promptLanguage, userContext);
         String fullResponse = tokenBillingService.callApiWithUsage(prompt);
-        
+
         if (fullResponse != null) {
             String text = tokenBillingService.extractTextFromResponse(fullResponse);
             Long logId = logWithId(userId, postId, "QUESTION", question, text, 1);
-            if (logId != null) {
-                String modelName = tokenBillingService.getCurrentModel();
-                tokenUsageLogger.logTokenUsage(logId, fullResponse, modelName);
-            }
+            logTokenUsage(logId, fullResponse);
+            favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
             return ApiResponse.success(new AiResultVO("QUESTION", promptLanguage, text));
         }
-        
-        // 降级到原生 AiService
-        String fallbackText = aiService.answerQuestion(post.content(), question, promptLanguage);
+
+        String fallbackText = aiService.answerQuestion(post.content(), question, promptLanguage, userContext);
         log(userId, postId, "QUESTION", question, fallbackText, 0);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("QUESTION", promptLanguage, fallbackText));
     }
 
@@ -168,10 +171,7 @@ public class AiController {
         if (fullResponse != null) {
             String text = tokenBillingService.extractTextFromResponse(fullResponse);
             Long logId = logWithId(userId, null, "MARKDOWN_FORMAT", source, text, 1);
-            if (logId != null) {
-                String modelName = tokenBillingService.getCurrentModel();
-                tokenUsageLogger.logTokenUsage(logId, fullResponse, modelName);
-            }
+            logTokenUsage(logId, fullResponse);
             return ApiResponse.success(new AiResultVO("MARKDOWN_FORMAT", promptLanguage, text));
         }
         
@@ -253,6 +253,12 @@ public class AiController {
         logWithId(userId, postId, aiType, requestText, responseText, success);
     }
 
+    private void logTokenUsage(Long logId, String fullResponse) {
+        if (logId != null) {
+            tokenUsageLogger.logTokenUsage(logId, fullResponse, tokenBillingService.getCurrentModel());
+        }
+    }
+
     private String contentLanguage(AiLanguageRequest request) {
         if (request != null && !isBlank(request.contentLanguageCode())) {
             return request.contentLanguageCode();
@@ -274,7 +280,8 @@ public class AiController {
     /**
      * 构建摘要生成的 prompt
      */
-    private String buildSummaryPrompt(String content, String language) {
+    private String buildSummaryPrompt(String content, String language, String userContext) {
+        String context = learningContextBlock(userContext, language);
         boolean isEnglish = language != null && language.toLowerCase().startsWith("en");
         if (isEnglish) {
             return """
@@ -285,9 +292,10 @@ public class AiController {
 
                     Website language: English
 
+                    %s
                     Content:
                     %s
-                    """.formatted(content);
+                    """.formatted(context, content);
         } else {
             return """
                     请用中文提炼这篇学习内容。输出要像真实学习产品里的 AI 摘要：
@@ -297,16 +305,18 @@ public class AiController {
 
                     网站语言：中文
 
+                    %s
                     内容：
                     %s
-                    """.formatted(content);
+                    """.formatted(context, content);
         }
     }
 
     /**
      * 构建复习卡片生成的 prompt
      */
-    private String buildQuizPrompt(String content, String language) {
+    private String buildQuizPrompt(String content, String language, String userContext) {
+        String context = learningContextBlock(userContext, language);
         boolean isEnglish = language != null && language.toLowerCase().startsWith("en");
         if (isEnglish) {
             return """
@@ -317,9 +327,10 @@ public class AiController {
 
                     Website language: English
 
+                    %s
                     Content:
                     %s
-                    """.formatted(content);
+                    """.formatted(context, content);
         } else {
             return """
                     请把这篇学习内容整理成复习卡片。输出 4 张卡片，每张包含：
@@ -329,40 +340,65 @@ public class AiController {
 
                     网站语言：中文
 
+                    %s
                     内容：
                     %s
-                    """.formatted(content);
+                    """.formatted(context, content);
         }
     }
 
     /**
      * 构建问题回答的 prompt
      */
-    private String buildQuestionPrompt(String postContent, String question, String language) {
+    private String buildQuestionPrompt(String postContent, String question, String language, String userContext) {
+        String context = learningContextBlock(userContext, language);
         boolean isEnglish = language != null && language.toLowerCase().startsWith("en");
         if (isEnglish) {
             return """
                     You are StudyForge AI's learning assistant. Answer only from the article content.
                     Answer in English.
 
+                    %s
                     Article:
                     %s
 
                     Question:
                     %s
-                    """.formatted(postContent, question);
+                    """.formatted(context, postContent, question);
         } else {
             return """
                     你是 StudyForge AI 的学习助手。请只依据文章内容回答问题。
                     请用中文回答。
 
+                    %s
                     文章：
                     %s
 
                     问题：
                     %s
-                    """.formatted(postContent, question);
+                    """.formatted(context, postContent, question);
         }
+    }
+
+    private String learningContextBlock(String userContext, String language) {
+        if (isBlank(userContext)) {
+            return "";
+        }
+        boolean isEnglish = language != null && language.toLowerCase().startsWith("en");
+        if (isEnglish) {
+            return """
+                    Learner memory context:
+                    %s
+
+                    Use this context only when it helps personalize emphasis, examples, or review focus.
+                    """.formatted(userContext);
+        }
+        return """
+                学习记忆上下文：
+                %s
+
+                仅在有助于个性化重点、示例或复习方向时使用这段上下文。
+                """.formatted(userContext);
     }
 
     /**

@@ -42,31 +42,34 @@ public class SiliconFlowAiServiceImpl implements AiService {
     }
 
     @Override
-    public String generateSummary(String content, String language) {
+    public String generateSummary(String content, String language, String userContext) {
+        String contextBlock = formatUserContext(userContext, language);
         String prompt = isEnglish(language)
                 ? """
                 Please summarize this learning post in English. Make the output feel like an AI summary in a real learning product:
                 1. Start with 3 key points.
                 2. Then add one concise takeaway worth saving.
                 3. Do not mention "according to the document" or "as an AI".
+                4. If user learning memory is provided and relevant, align emphasis with it.
 
                 Website language: English
-
+                %s
                 Content:
                 %s
-                """.formatted(content)
+                """.formatted(contextBlock, content)
                 : """
                 请用中文提炼这篇学习内容。输出要像真实学习产品里的 AI 摘要：
                 1. 先给 3 条要点；
                 2. 再给 1 句适合收藏的结论；
-                3. 不要提“根据文档/作为 AI”。
+                3. 不要提“根据文档/作为 AI”；
+                4. 若提供了用户学习记忆且相关，请更贴合其学习重点。
 
                 网站语言：中文
-
+                %s
                 内容：
                 %s
-                """.formatted(content);
-        return complete(prompt, () -> fallback.generateSummary(content, language));
+                """.formatted(contextBlock, content);
+        return complete(prompt, () -> fallback.generateSummary(content, language, userContext));
     }
 
     @Override
@@ -102,57 +105,157 @@ public class SiliconFlowAiServiceImpl implements AiService {
     }
 
     @Override
-    public String answerQuestion(String postContent, String question, String answerLanguage) {
+    public String answerQuestion(String postContent, String question, String answerLanguage, String userContext) {
+        String contextBlock = formatUserContext(userContext, answerLanguage);
         String prompt = isEnglish(answerLanguage)
                 ? """
                 You are StudyForge AI's learning assistant. Answer only from the article content.
                 Answer in English.
-
+                %s
                 Article:
                 %s
 
                 Question:
                 %s
-                """.formatted(postContent, question)
+                """.formatted(contextBlock, postContent, question)
                 : """
                 你是 StudyForge AI 的学习助手。请只依据文章内容回答问题。
                 请用中文回答。
-
+                %s
                 文章：
                 %s
 
                 问题：
                 %s
-                """.formatted(postContent, question);
-        return complete(prompt, () -> fallback.answerQuestion(postContent, question, answerLanguage));
+                """.formatted(contextBlock, postContent, question);
+        return complete(prompt, () -> fallback.answerQuestion(postContent, question, answerLanguage, userContext));
     }
 
     @Override
-    public String generateQuiz(String postContent, String language) {
+    public String generateQuiz(String postContent, String language, String userContext) {
+        String contextBlock = formatUserContext(userContext, language);
         String prompt = isEnglish(language)
                 ? """
                 Turn this learning post into review cards. Output 4 cards. Each card must include:
                 - Question
                 - Short answer
                 - Keywords for review
+                If user learning memory is relevant, emphasize their focus areas.
 
                 Website language: English
-
+                %s
                 Content:
                 %s
-                """.formatted(postContent)
+                """.formatted(contextBlock, postContent)
                 : """
                 请把这篇学习内容整理成复习卡片。输出 4 张卡片，每张包含：
                 - 问题
                 - 简短答案
                 - 适合回顾的关键词
+                若用户学习记忆相关，请更侧重其关注主题。
 
                 网站语言：中文
-
+                %s
                 内容：
                 %s
-                """.formatted(postContent);
-        return complete(prompt, () -> fallback.generateQuiz(postContent, language));
+                """.formatted(contextBlock, postContent);
+        return complete(prompt, () -> fallback.generateQuiz(postContent, language, userContext));
+    }
+
+    @Override
+    public String refreshUserLearningProfile(String signalsPayload, String language) {
+        String prompt = isEnglish(language)
+                ? """
+                Compress the following learning behavior signals into a user learning memory profile.
+                Output JSON only with this shape:
+                {"memory_md":"...","interest_tags":[{"tag":"Spring","weight":0.82,"source":"auto"}]}
+                Rules:
+                - memory_md <= 800 chars, markdown, 3 short sections
+                - 4 to 12 interest_tags with weights 0.1 to 1.0
+                - do not invent topics without evidence in signals
+
+                Signals:
+                %s
+                """.formatted(signalsPayload)
+                : """
+                请把下面的学习行为信号压缩成用户学习记忆画像。
+                只输出 JSON，格式如下：
+                {"memory_md":"...","interest_tags":[{"tag":"Spring","weight":0.82,"source":"auto"}]}
+                规则：
+                - memory_md 不超过 800 字，使用 markdown，分 3 个小节
+                - interest_tags 4 到 12 个，权重 0.1 到 1.0
+                - 不要编造信号里不存在的主题
+
+                信号：
+                %s
+                """.formatted(signalsPayload);
+        return complete(prompt, () -> fallback.refreshUserLearningProfile(signalsPayload, language));
+    }
+
+    @Override
+    public String extractPostSemanticTags(String title, String summary, String language) {
+        String prompt = isEnglish(language)
+                ? """
+                Analyze the article title and summary. Output a JSON array of semantic learning tags with weights.
+                Format: [{"tag":"Vue","weight":0.92},{"tag":"frontend state","weight":0.74}]
+                Rules:
+                - 4 to 8 tags
+                - weight between 0.1 and 1.0
+                - short topic labels only
+                - JSON only, no markdown fences
+
+                Title:
+                %s
+
+                Summary:
+                %s
+                """.formatted(blankToEmpty(title), blankToEmpty(summary))
+                : """
+                分析文章标题和摘要，输出带权重的语义学习标签 JSON 数组。
+                格式：[{"tag":"Vue","weight":0.92},{"tag":"前端状态管理","weight":0.74}]
+                规则：
+                - 4 到 8 个标签
+                - weight 在 0.1 到 1.0 之间
+                - tag 用简短中文或技术专名
+                - 只输出 JSON，不要 markdown 代码块
+
+                标题：
+                %s
+
+                摘要：
+                %s
+                """.formatted(blankToEmpty(title), blankToEmpty(summary));
+        return complete(prompt, () -> fallback.extractPostSemanticTags(title, summary, language));
+    }
+
+    @Override
+    public String extractMemorySemanticTags(String memoryMd, String language) {
+        String prompt = isEnglish(language)
+                ? """
+                Analyze the user's learning MEMORY and extract interest tags with polarity.
+                Format: [{"tag":"Vue","weight":0.95,"polarity":"like"},{"tag":"English articles","weight":0.85,"polarity":"dislike"}]
+                Rules:
+                - 3 to 10 tags
+                - weight between 0.1 and 1.0
+                - polarity is like or dislike
+                - JSON only
+
+                MEMORY:
+                %s
+                """.formatted(blankToEmpty(memoryMd))
+                : """
+                分析用户学习 MEMORY，提取带极性的兴趣标签。
+                格式：[{"tag":"Vue","weight":0.95,"polarity":"like"},{"tag":"英文长文","weight":0.85,"polarity":"dislike"}]
+                规则：
+                - 3 到 10 个标签
+                - weight 在 0.1 到 1.0 之间
+                - polarity 为 like 或 dislike
+                - 只输出 JSON
+
+                MEMORY：
+                %s
+                """.formatted(blankToEmpty(memoryMd));
+        return complete(prompt, () -> fallback.extractMemorySemanticTags(memoryMd, language));
     }
 
     @Override
@@ -437,6 +540,16 @@ public class SiliconFlowAiServiceImpl implements AiService {
             }
         }
         return null;
+    }
+
+    private String formatUserContext(String userContext, String language) {
+        if (userContext == null || userContext.isBlank()) {
+            return "";
+        }
+        if (isEnglish(language)) {
+            return "\nUser learning memory:\n" + userContext.trim() + "\n";
+        }
+        return "\n" + userContext.trim() + "\n";
     }
 
     private boolean isEnglish(String language) {

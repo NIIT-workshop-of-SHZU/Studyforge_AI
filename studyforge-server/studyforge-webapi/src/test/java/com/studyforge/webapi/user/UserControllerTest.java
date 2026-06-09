@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.studyforge.ai.service.AiService;
 import com.studyforge.content.service.PostQueryService;
+import com.studyforge.interaction.learning.service.FavoriteImportanceService;
+import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.system.service.AuthService;
 import com.studyforge.system.service.UserProfileService;
 import com.studyforge.system.vo.UserProfileVO;
@@ -27,9 +30,25 @@ class UserControllerTest {
     @Mock
     private PostQueryService postQueryService;
 
+    @Mock
+    private UserLearningProfileService userLearningProfileService;
+
+    @Mock
+    private FavoriteImportanceService favoriteImportanceService;
+
+    @Mock
+    private AiService aiService;
+
     @Test
     void unfollowCompatibilityUsesExpectedRouteAndDelegatesToService() throws NoSuchMethodException {
-        UserController controller = new UserController(authService, userProfileService, postQueryService);
+        UserController controller = new UserController(
+                authService,
+                userProfileService,
+                postQueryService,
+                userLearningProfileService,
+                favoriteImportanceService,
+                aiService
+        );
         UserProfileVO profile = new UserProfileVO(
                 8L,
                 "target",

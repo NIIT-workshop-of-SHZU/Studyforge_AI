@@ -18,6 +18,7 @@
         <result column="hot_score" property="hotScore"/>
         <result column="created_time" property="createdTime"/>
         <result column="updated_time" property="updatedTime"/>
+        <result column="activity_time" property="activityTime"/>
     </resultMap>
 
     <sql id="PostColumns">
@@ -107,7 +108,8 @@
 
     <select id="selectFavoritesByUser" resultMap="PostResultMap">
         SELECT
-        <include refid="PostColumnsWithAlias"/>
+        <include refid="PostColumnsWithAlias"/>,
+        f.created_time AS activity_time
         FROM post_favorites f
         JOIN posts p ON p.post_id = f.post_id
         WHERE f.user_id = #{userId}
@@ -142,7 +144,8 @@
 
     <select id="selectHistoryByUser" resultMap="PostResultMap">
         SELECT
-        <include refid="PostColumnsWithAlias"/>
+        <include refid="PostColumnsWithAlias"/>,
+        h.view_time AS activity_time
         FROM post_view_history h
         JOIN posts p ON p.post_id = h.post_id
         WHERE h.user_id = #{userId}

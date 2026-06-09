@@ -8,6 +8,8 @@ import com.studyforge.interaction.dto.CreateFavoriteCollectionRequest;
 import com.studyforge.interaction.entity.FavoriteCollection;
 import com.studyforge.interaction.mapper.FavoriteCollectionMapper;
 import com.studyforge.interaction.mapper.PostFavoriteMapper;
+import com.studyforge.interaction.learning.service.FavoriteImportanceService;
+import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.interaction.service.FavoriteCollectionService;
 import com.studyforge.interaction.vo.FavoriteCollectionVO;
 import java.util.List;
@@ -19,13 +21,19 @@ public class FavoriteCollectionServiceImpl implements FavoriteCollectionService 
     private final FavoriteCollectionMapper favoriteCollectionMapper;
     private final PostFavoriteMapper postFavoriteMapper;
     private final PostMapper postMapper;
+    private final UserLearningProfileService userLearningProfileService;
+    private final FavoriteImportanceService favoriteImportanceService;
 
     public FavoriteCollectionServiceImpl(FavoriteCollectionMapper favoriteCollectionMapper,
                                          PostFavoriteMapper postFavoriteMapper,
-                                         PostMapper postMapper) {
+                                         PostMapper postMapper,
+                                         UserLearningProfileService userLearningProfileService,
+                                         FavoriteImportanceService favoriteImportanceService) {
         this.favoriteCollectionMapper = favoriteCollectionMapper;
         this.postFavoriteMapper = postFavoriteMapper;
         this.postMapper = postMapper;
+        this.userLearningProfileService = userLearningProfileService;
+        this.favoriteImportanceService = favoriteImportanceService;
     }
 
     @Override
@@ -68,6 +76,7 @@ public class FavoriteCollectionServiceImpl implements FavoriteCollectionService 
             postMapper.incrementFavoriteCount(postId, 1);
         }
         favoriteCollectionMapper.insertIgnoreItem(collection.getCollectionId(), postId, userId);
+        afterFavoriteChanged(userId, collectionId, post.getOriginalLanguage());
         return toVO(favoriteCollectionMapper.selectById(collectionId));
     }
 
@@ -75,7 +84,10 @@ public class FavoriteCollectionServiceImpl implements FavoriteCollectionService 
     @Transactional
     public FavoriteCollectionVO removePost(Long userId, Long collectionId, Long postId) {
         FavoriteCollection collection = requireOwnedCollection(userId, collectionId);
+        Post post = postMapper.selectById(postId);
         favoriteCollectionMapper.deleteItem(collection.getCollectionId(), postId, userId);
+        String languageCode = post == null || post.getOriginalLanguage() == null ? "zh_CN" : post.getOriginalLanguage();
+        afterFavoriteChanged(userId, collectionId, languageCode);
         return toVO(favoriteCollectionMapper.selectById(collectionId));
     }
 
@@ -117,5 +129,12 @@ public class FavoriteCollectionServiceImpl implements FavoriteCollectionService 
 
     private String limit(String value, int maxLength) {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private void afterFavoriteChanged(Long userId, Long collectionId, String languageCode) {
+        String normalizedLanguage = languageCode == null || languageCode.isBlank() ? "zh_CN" : languageCode;
+        userLearningProfileService.ensureProfile(userId, normalizedLanguage);
+        favoriteImportanceService.recomputeCollection(userId, collectionId, normalizedLanguage);
+        userLearningProfileService.syncAutoSignals(userId, normalizedLanguage);
     }
 }

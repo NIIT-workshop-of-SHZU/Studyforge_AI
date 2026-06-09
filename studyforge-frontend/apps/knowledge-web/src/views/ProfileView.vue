@@ -4,23 +4,21 @@ import { RouterLink, useRoute } from 'vue-router';
 import {
   BookOpen,
   BookmarkCheck,
+  Brain,
   CircleHelp,
   Eye,
   Heart,
   MessageCircle,
   MessageSquareReply,
   PenLine,
-  Settings,
   Star,
-  UserRound,
-  Users
+  UserRound
 } from '@lucide/vue';
+import { getMyAiUsage, type AiUserUsage } from '@/api/ai-usage';
 import { ApiError } from '@/api/http';
-import { getMyAiUsage } from '@/api/ai-usage';
 import { getUserHomepage } from '@/api/homepages';
 import {
   followUser,
-  getFriends,
   getMyProfile,
   getUserActivities,
   getUserPosts,
@@ -36,10 +34,10 @@ import LoadingState from '@/components/LoadingState.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
-import type { PostSummary, SocialUser, TopicCategory, UserActivity, UserHomepage, UserProfile } from '@/types/api';
+import type { PostSummary, TopicCategory, UserActivity, UserHomepage, UserProfile } from '@/types/api';
 import { formatShortDateTime } from '@/utils/date';
 
-type ProfileTab = 'activity' | 'posts' | 'friends' | 'ai-usage';
+type ProfileTab = 'activity' | 'posts' | 'ai-usage';
 
 const route = useRoute();
 const preferencesStore = usePreferencesStore();
@@ -49,8 +47,7 @@ const profile = ref<UserProfile | null>(null);
 const homepage = ref<UserHomepage | null>(null);
 const posts = ref<PostSummary[]>([]);
 const activities = ref<UserActivity[]>([]);
-const friends = ref<SocialUser[]>([]);
-const aiUsage = ref<any>(null);
+const aiUsage = ref<AiUserUsage | null>(null);
 const loading = ref(false);
 const actionLoading = ref(false);
 const errorMessage = ref('');
@@ -83,6 +80,8 @@ const copy = computed(() => {
       accountDesc: 'Update avatar, name, and password',
       homepageStudio: 'Homepage Studio',
       homepageStudioDesc: 'Default, code, and media-driven homepage design',
+      memory: 'MEMORY.md',
+      memoryDesc: 'Review and tune your learning profile',
       tabsAria: 'Profile sections',
       activity: 'Activity',
       posts: 'Posts',
@@ -153,6 +152,8 @@ const copy = computed(() => {
     accountDesc: '修改头像、名字和密码',
     homepageStudio: '主页设计',
     homepageStudioDesc: '默认模板、代码主页和媒体主页',
+    memory: 'MEMORY.md',
+    memoryDesc: '阅读与编辑学习画像',
     tabsAria: '个人主页内容',
     activity: '动态',
     posts: '投稿',
@@ -220,7 +221,6 @@ async function loadProfile() {
     homepage.value = null;
     posts.value = [];
     activities.value = [];
-    friends.value = [];
     aiUsage.value = null;
     return;
   }
@@ -234,25 +234,27 @@ async function loadProfile() {
   try {
     const profileData = isMeRoute.value ? await getMyProfile() : await getUserProfile(targetUserId.value);
     profile.value = profileData;
-    const [homepageData, postData, friendData, activityData] = await Promise.all([
+    if (!profileData.self && activeTab.value === 'ai-usage') {
+      activeTab.value = 'activity';
+    }
+    const [homepageData, postData, activityData] = await Promise.all([
       getUserHomepage(profileData.userId),
       getUserPosts(profileData.userId, preferencesStore.languageCode),
-      getFriends(profileData.userId),
       getUserActivities(profileData.userId, preferencesStore.languageCode)
     ]);
     homepage.value = homepageData;
     posts.value = postData;
-    friends.value = friendData;
     activities.value = activityData;
-    
-    // 如果是自己的主页，加载 AI 用量
-    if (isMeRoute.value) {
+
+    if (profileData.self) {
       try {
         aiUsage.value = await getMyAiUsage();
       } catch (error) {
         console.warn('Failed to load AI usage:', error);
         aiUsage.value = null;
       }
+    } else {
+      aiUsage.value = null;
     }
   } catch (error) {
     if (error instanceof ApiError && error.code === 4010) {
@@ -344,7 +346,6 @@ async function requestFriendship() {
       await sendFriendRequest(profile.value.userId, copy.value.friendRequestMessage);
     }
     profile.value = await getUserProfile(profile.value.userId);
-    friends.value = await getFriends(profile.value.userId);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : copy.value.friendFailed;
   } finally {
@@ -383,37 +384,21 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
       />
 
       <section v-if="profile.self" class="profile-shortcuts">
-        <RouterLink class="profile-shortcut-card" to="/publish">
-          <PenLine :size="24" />
-          <strong>{{ copy.publishCenter }}</strong>
-          <span>{{ copy.publishCenterDesc }}</span>
-        </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/favorites">
-          <BookmarkCheck :size="24" />
-          <strong>{{ copy.favorites }}</strong>
-          <span>{{ copy.favoritesDesc }}</span>
-        </RouterLink>
         <RouterLink class="profile-shortcut-card" to="/friends">
           <MessageCircle :size="24" />
           <strong>{{ copy.friends }}</strong>
           <span>{{ copy.friendsDesc }}</span>
         </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/account">
-          <Settings :size="24" />
-          <strong>{{ copy.account }}</strong>
-          <span>{{ copy.accountDesc }}</span>
-        </RouterLink>
-        <RouterLink class="profile-shortcut-card" to="/homepage-studio">
-          <PenLine :size="24" />
-          <strong>{{ copy.homepageStudio }}</strong>
-          <span>{{ copy.homepageStudioDesc }}</span>
+        <RouterLink class="profile-shortcut-card" to="/memory">
+          <Brain :size="24" />
+          <strong>{{ copy.memory }}</strong>
+          <span>{{ copy.memoryDesc }}</span>
         </RouterLink>
       </section>
 
-      <nav class="profile-tabs" aria-label="个人主页内容">
-        <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">动态</button>
-        <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">投稿</button>
-        <button type="button" :class="{ active: activeTab === 'friends' }" @click="activeTab = 'friends'">好友</button>
+      <nav class="profile-tabs" :class="{ 'has-ai-usage': profile.self }" :aria-label="copy.tabsAria">
+        <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">{{ copy.activity }}</button>
+        <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">{{ copy.posts }}</button>
         <button v-if="profile.self" type="button" :class="{ active: activeTab === 'ai-usage' }" @click="activeTab = 'ai-usage'">{{ copy.aiUsageTab }}</button>
       </nav>
 
@@ -478,25 +463,7 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
         <EmptyState v-if="posts.length === 0" :title="copy.noPosts" :description="copy.noPostsDesc" />
       </section>
 
-      <section v-else-if="activeTab === 'friends'" class="social-grid">
-        <article v-for="user in friends" :key="user.userId" class="social-card">
-          <img v-if="user.avatarUrl" :src="user.avatarUrl" alt="" />
-          <UserRound v-else :size="24" />
-          <div>
-            <strong>{{ user.displayName }}</strong>
-            <span>@{{ user.username }} · Lv.{{ user.communityLevel }}</span>
-            <p>{{ user.bio }}</p>
-          </div>
-          <RouterLink class="secondary-button stable-action" :to="`/users/${user.userId}`">
-            <Users :size="16" />
-            <span>{{ copy.profileLink }}</span>
-          </RouterLink>
-        </article>
-        <EmptyState v-if="friends.length === 0" :title="copy.noFriends" :description="copy.noFriendsDesc" />
-      </section>
-
-      <!-- AI 用量标签页 -->
-      <section v-else-if="activeTab === 'ai-usage'" class="ai-usage-section">
+      <section v-else-if="profile.self && activeTab === 'ai-usage'" class="ai-usage-section">
         <h2>{{ copy.aiUsageTitle }}</h2>
         
         <div v-if="!aiUsage" class="empty-usage">

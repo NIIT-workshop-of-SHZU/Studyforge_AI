@@ -18,4 +18,6 @@ public interface PostQueryService {
     List<PostSummaryVO> listFavoriteCollection(Long userId, Long collectionId, String languageCode, int limit);
 
     List<PostSummaryVO> listHistory(Long userId, String languageCode, int limit);
+
+    PostSummaryVO getSummary(Long postId, String languageCode);
 }

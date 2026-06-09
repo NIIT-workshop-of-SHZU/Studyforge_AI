@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.interaction.learning.mapper.UserLearningProfileMapper">
+    <resultMap id="UserLearningProfileResultMap" type="com.studyforge.interaction.learning.entity.UserLearningProfile">
+        <id column="user_id" property="userId"/>
+        <result column="memory_md" property="memoryMd"/>
+        <result column="memory_manually_edited" property="memoryManuallyEdited"/>
+        <result column="interest_tags" property="interestTags"/>
+        <result column="embedding_json" property="embeddingJson"/>
+        <result column="profile_version" property="profileVersion"/>
+        <result column="ai_memory_enabled" property="aiMemoryEnabled"/>
+        <result column="last_refreshed_at" property="lastRefreshedAt"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <select id="selectByUserId" resultMap="UserLearningProfileResultMap">
+        SELECT
+            user_id,
+            memory_md,
+            memory_manually_edited,
+            interest_tags,
+            embedding_json,
+            profile_version,
+            ai_memory_enabled,
+            last_refreshed_at,
+            created_time,
+            updated_time
+        FROM user_learning_profiles
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="com.studyforge.interaction.learning.entity.UserLearningProfile">
+        INSERT INTO user_learning_profiles (
+            user_id,
+            memory_md,
+            memory_manually_edited,
+            interest_tags,
+            embedding_json,
+            profile_version,
+            ai_memory_enabled,
+            last_refreshed_at
+        )
+        VALUES (
+            #{userId},
+            #{memoryMd},
+            COALESCE(#{memoryManuallyEdited}, 0),
+            #{interestTags},
+            #{embeddingJson},
+            COALESCE(#{profileVersion}, 1),
+            COALESCE(#{aiMemoryEnabled}, 1),
+            #{lastRefreshedAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.studyforge.interaction.learning.entity.UserLearningProfile">
+        UPDATE user_learning_profiles
+        SET memory_md = #{memoryMd},
+            memory_manually_edited = COALESCE(#{memoryManuallyEdited}, 0),
+            interest_tags = #{interestTags},
+            embedding_json = #{embeddingJson},
+            profile_version = #{profileVersion},
+            ai_memory_enabled = #{aiMemoryEnabled},
+            last_refreshed_at = #{lastRefreshedAt}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

@@ -9,6 +9,7 @@ import LoadingState from '@/components/LoadingState.vue';
 import TopicRail from '@/components/TopicRail.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import type { PostSummary, TopicCategory } from '@/types/api';
+import { toDate } from '@/utils/date';
 
 interface DecoratedPost extends PostSummary {
   category: TopicCategory;
@@ -61,18 +62,27 @@ const decoratedPosts = computed<DecoratedPost[]>(() =>
 const visiblePosts = computed(() => {
   const normalizedKeyword = keyword.value.trim().toLowerCase();
 
-  return decoratedPosts.value.filter((post) => {
-    const matchesCategory = activeCategory.value === 'ALL' || post.category.code === activeCategory.value;
-    const matchesKeyword =
-      !normalizedKeyword ||
-      post.title.toLowerCase().includes(normalizedKeyword) ||
-      post.summary.toLowerCase().includes(normalizedKeyword);
+  return decoratedPosts.value
+    .filter((post) => {
+      const matchesCategory = activeCategory.value === 'ALL' || post.category.code === activeCategory.value;
+      const matchesKeyword =
+        !normalizedKeyword ||
+        post.title.toLowerCase().includes(normalizedKeyword) ||
+        post.summary.toLowerCase().includes(normalizedKeyword);
 
-    return matchesCategory && matchesKeyword;
-  });
+      return matchesCategory && matchesKeyword;
+    })
+    .map((post, index) => ({ post, index }))
+    .sort(
+      (first, second) =>
+        languageRank(first.post.languageCode) - languageRank(second.post.languageCode) ||
+        postTimestamp(second.post) - postTimestamp(first.post) ||
+        first.index - second.index
+    )
+    .map(({ post }) => post);
 });
 
-const activeCategoryName = computed(() => categories.value.find((category) => category.code === activeCategory.value)?.name ?? '全部');
+const activeCategoryName = computed(() => categories.value.find((category) => category.code === activeCategory.value)?.name ?? categories.value[0]?.name ?? 'ALL');
 
 const averageHotScore = computed(() => {
   if (posts.value.length === 0) {
@@ -168,6 +178,14 @@ async function loadPosts() {
   } finally {
     loading.value = false;
   }
+}
+
+function languageRank(languageCode: string) {
+  return languageCode === preferencesStore.languageCode ? 0 : 1;
+}
+
+function postTimestamp(post: PostSummary) {
+  return toDate(post.createdTime)?.getTime() ?? 0;
 }
 
 onMounted(loadPosts);

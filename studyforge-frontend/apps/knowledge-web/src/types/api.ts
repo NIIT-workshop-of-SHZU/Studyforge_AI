@@ -45,6 +45,26 @@ export interface PostSummary {
   hotScore: number;
   createdTime: string | number[] | null;
   updatedTime: string | number[] | null;
+  activityTime?: string | number[] | null;
+  importanceScore?: number | null;
+  pinned?: boolean | null;
+  rankReasons?: string[] | null;
+}
+
+export interface InterestTag {
+  tag: string;
+  weight: number;
+  source?: 'auto' | 'manual' | 'semantic' | 'memory' | string;
+  polarity?: 'like' | 'dislike' | string;
+}
+
+export interface LearningMemory {
+  memoryMd: string;
+  interestTags: InterestTag[];
+  aiMemoryEnabled: boolean;
+  memoryManuallyEdited?: boolean;
+  lastRefreshedAt: string | number[] | null;
+  profileVersion: number;
 }
 
 export interface PostDetail extends PostSummary {

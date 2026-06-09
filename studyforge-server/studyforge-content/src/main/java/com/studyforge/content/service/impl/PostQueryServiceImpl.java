@@ -73,10 +73,11 @@ public class PostQueryServiceImpl implements PostQueryService {
     @Override
     public List<PostSummaryVO> getTrending(String languageCode, int limit) {
         int normalizedLimit = limit <= 0 ? 10 : Math.min(limit, 20);
+        String normalizedLanguage = normalizeLanguage(languageCode);
 
         return postMapper.selectPublishedByHotScore(normalizedLimit)
                 .stream()
-                .map(this::toOriginalSummary)
+                .map(post -> toSummary(post, normalizedLanguage))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -84,9 +85,11 @@ public class PostQueryServiceImpl implements PostQueryService {
     @Override
     public List<PostSummaryVO> list(String languageCode, String categoryCode, String keyword, int limit) {
         int normalizedLimit = normalizeLimit(limit, 30);
+        String normalizedLanguage = normalizeLanguage(languageCode);
+
         return postMapper.selectPublished(emptyToNull(categoryCode), emptyToNull(keyword), normalizedLimit)
                 .stream()
-                .map(this::toOriginalSummary)
+                .map(post -> toSummary(post, normalizedLanguage))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -119,6 +122,15 @@ public class PostQueryServiceImpl implements PostQueryService {
                 .map(post -> toSummary(post, normalizeLanguage(languageCode)))
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    @Override
+    public PostSummaryVO getSummary(Long postId, String languageCode) {
+        Post post = postMapper.selectById(postId);
+        if (post == null || !"PUBLISHED".equals(post.getStatus())) {
+            return null;
+        }
+        return toSummary(post, normalizeLanguage(languageCode));
     }
 
     @Override
@@ -162,7 +174,11 @@ public class PostQueryServiceImpl implements PostQueryService {
                 safeInt(post.getViewCount()),
                 toDouble(post.getHotScore()),
                 post.getCreatedTime(),
-                post.getUpdatedTime()
+                post.getUpdatedTime(),
+                post.getActivityTime(),
+                null,
+                null,
+                null
         );
     }
 

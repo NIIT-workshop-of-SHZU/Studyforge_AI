@@ -12,4 +12,9 @@ public interface PostI18nMapper {
     int insert(PostI18n postI18n);
 
     int updateById(PostI18n postI18n);
+
+    int updateSemanticTags(@Param("postId") Long postId,
+                           @Param("languageCode") String languageCode,
+                           @Param("semanticTagsJson") String semanticTagsJson,
+                           @Param("semanticTagsFingerprint") String semanticTagsFingerprint);
 }

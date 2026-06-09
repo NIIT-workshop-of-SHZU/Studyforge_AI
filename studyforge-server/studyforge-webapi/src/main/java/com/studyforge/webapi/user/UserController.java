@@ -1,9 +1,18 @@
 package com.studyforge.webapi.user;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.studyforge.ai.service.AiService;
 import com.studyforge.common.api.ApiResponse;
 import com.studyforge.common.constants.HttpHeaders;
 import com.studyforge.content.service.PostQueryService;
 import com.studyforge.content.vo.PostSummaryVO;
+import com.studyforge.interaction.learning.dto.UpdateLearningMemoryRequest;
+import com.studyforge.interaction.learning.model.InterestTag;
+import com.studyforge.interaction.learning.service.FavoriteImportanceService;
+import com.studyforge.interaction.learning.service.UserLearningProfileService;
+import com.studyforge.interaction.learning.vo.LearningMemoryVO;
 import com.studyforge.system.dto.FriendMessageRequest;
 import com.studyforge.system.dto.FriendRequestCreateRequest;
 import com.studyforge.system.dto.FriendRequestReviewRequest;
@@ -34,11 +43,24 @@ public class UserController {
     private final AuthService authService;
     private final UserProfileService userProfileService;
     private final PostQueryService postQueryService;
+    private final UserLearningProfileService userLearningProfileService;
+    private final FavoriteImportanceService favoriteImportanceService;
+    private final AiService aiService;
+    private final ObjectMapper objectMapper;
 
-    public UserController(AuthService authService, UserProfileService userProfileService, PostQueryService postQueryService) {
+    public UserController(AuthService authService,
+                          UserProfileService userProfileService,
+                          PostQueryService postQueryService,
+                          UserLearningProfileService userLearningProfileService,
+                          FavoriteImportanceService favoriteImportanceService,
+                          AiService aiService) {
         this.authService = authService;
         this.userProfileService = userProfileService;
         this.postQueryService = postQueryService;
+        this.userLearningProfileService = userLearningProfileService;
+        this.favoriteImportanceService = favoriteImportanceService;
+        this.aiService = aiService;
+        this.objectMapper = new ObjectMapper();
     }
 
     @GetMapping("/me/profile")
@@ -59,6 +81,35 @@ public class UserController {
                                                      @RequestBody UpdatePasswordRequest request) {
         Long userId = authService.requireUserId(authorization);
         return ApiResponse.success(userProfileService.updatePassword(userId, request));
+    }
+
+    @GetMapping("/me/learning-memory")
+    public ApiResponse<LearningMemoryVO> learningMemory(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        Long userId = authService.requireUserId(authorization);
+        return ApiResponse.success(userLearningProfileService.getMine(userId));
+    }
+
+    @PutMapping("/me/learning-memory")
+    public ApiResponse<LearningMemoryVO> updateLearningMemory(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                                              @RequestBody UpdateLearningMemoryRequest request,
+                                                              @RequestParam(name = "languageCode", defaultValue = "zh_CN") String languageCode) {
+        Long userId = authService.requireUserId(authorization);
+        LearningMemoryVO updated = userLearningProfileService.updateMine(userId, request);
+        favoriteImportanceService.recomputeAllForUser(userId, languageCode);
+        return ApiResponse.success(updated);
+    }
+
+    @PostMapping("/me/learning-memory/refresh")
+    public ApiResponse<LearningMemoryVO> refreshLearningMemory(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                                               @RequestParam(name = "languageCode", defaultValue = "zh_CN") String languageCode) {
+        Long userId = authService.requireUserId(authorization);
+        userLearningProfileService.assertRefreshQuota(userId);
+        userLearningProfileService.ensureProfile(userId, languageCode);
+        String signals = userLearningProfileService.buildRefreshSignals(userId, languageCode);
+        String generated = aiService.refreshUserLearningProfile(signals, languageCode);
+        LearningMemoryVO refreshed = parseGeneratedLearningProfile(userId, generated, languageCode);
+        favoriteImportanceService.recomputeAllForUser(userId, languageCode);
+        return ApiResponse.success(refreshed);
     }
 
     @GetMapping("/{userId}/profile")
@@ -182,5 +233,38 @@ public class UserController {
                                                     @RequestBody FriendMessageRequest request) {
         Long userId = authService.requireUserId(authorization);
         return ApiResponse.success("sent", userProfileService.sendFriendMessage(userId, friendId, request));
+    }
+
+    private LearningMemoryVO parseGeneratedLearningProfile(Long userId, String generated, String languageCode) {
+        if (generated == null || generated.isBlank()) {
+            return userLearningProfileService.refreshMine(userId, languageCode);
+        }
+        try {
+            JsonNode root = objectMapper.readTree(stripJsonFence(generated));
+            String memoryMd = root.path("memory_md").asText("");
+            List<InterestTag> tags = objectMapper.convertValue(
+                    root.path("interest_tags"),
+                    new TypeReference<List<InterestTag>>() {
+                    }
+            );
+            return userLearningProfileService.applyGeneratedProfile(userId, memoryMd, tags);
+        } catch (Exception exception) {
+            return userLearningProfileService.refreshMine(userId, languageCode);
+        }
+    }
+
+    private String stripJsonFence(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.startsWith("```")) {
+            int firstLineBreak = trimmed.indexOf('\n');
+            int lastFence = trimmed.lastIndexOf("```");
+            if (firstLineBreak >= 0 && lastFence > firstLineBreak) {
+                return trimmed.substring(firstLineBreak + 1, lastFence).trim();
+            }
+        }
+        return trimmed;
     }
 }

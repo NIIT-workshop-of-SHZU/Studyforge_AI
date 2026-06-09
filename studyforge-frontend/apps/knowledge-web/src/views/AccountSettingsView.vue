@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { ArrowLeft, Image, KeyRound, RefreshCw, Save, UserRound } from '@lucide/vue';
+import { ArrowLeft, Brain, Image, KeyRound, RefreshCw, Save, UserRound } from '@lucide/vue';
 import { uploadImage } from '@/api/uploads';
 import { getMyProfile, updateMyPassword, updateMyProfile } from '@/api/users';
 import EmptyState from '@/components/EmptyState.vue';
@@ -295,6 +295,15 @@ onMounted(loadProfile);
           </form>
         </section>
 
+        <section class="account-panel memory-link-panel">
+          <div class="panel-title">
+            <Brain :size="18" />
+            <span>学习记忆 MEMORY.md</span>
+          </div>
+          <p class="panel-hint">阅读或编辑你的学习画像，影响收藏排序与 AI 输出。</p>
+          <RouterLink class="primary-button" to="/memory">打开 MEMORY.md</RouterLink>
+        </section>
+
         <section class="account-panel">
           <div class="panel-title">
             <KeyRound :size="18" />
@@ -326,3 +335,15 @@ onMounted(loadProfile);
     </template>
   </section>
 </template>
+
+<style scoped>
+.panel-hint {
+  margin: 0 0 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.memory-link-panel .primary-button {
+  width: fit-content;
+}
+</style>

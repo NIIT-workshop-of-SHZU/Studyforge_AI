@@ -110,6 +110,13 @@ public class NotificationServiceImpl implements NotificationService {
         if (notificationId == null) {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "notificationId is required");
         }
+        Integer readFlag = notificationMapper.selectReadFlag(recipientId, notificationId);
+        if (readFlag == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "notification not found");
+        }
+        if (readFlag == 1) {
+            return;
+        }
         notificationMapper.markRead(recipientId, notificationId);
     }
 
