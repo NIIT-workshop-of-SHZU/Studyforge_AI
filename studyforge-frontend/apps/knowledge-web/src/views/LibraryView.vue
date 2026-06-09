@@ -100,6 +100,10 @@ watch(
               <BookmarkCheck :size="17" />
               <span>整理收藏夹</span>
             </RouterLink>
+            <RouterLink class="secondary-button" to="/memory">
+              <NotebookTabs :size="17" />
+              <span>MEMORY.md</span>
+            </RouterLink>
           </div>
         </section>
 

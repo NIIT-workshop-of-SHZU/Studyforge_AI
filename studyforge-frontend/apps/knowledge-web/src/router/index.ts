@@ -11,6 +11,7 @@ import PostDetailView from '@/views/PostDetailView.vue';
 import ProfileView from '@/views/ProfileView.vue';
 import PublishView from '@/views/PublishView.vue';
 import HelpView from '@/views/HelpView.vue';
+import LearningMemoryView from '@/views/LearningMemoryView.vue';
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,6 +55,11 @@ export const router = createRouter({
       path: '/favorites',
       name: 'favorites',
       component: FavoritesView
+    },
+    {
+      path: '/memory',
+      name: 'learning-memory',
+      component: LearningMemoryView
     },
     {
       path: '/friends',

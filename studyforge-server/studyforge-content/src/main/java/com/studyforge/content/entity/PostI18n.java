@@ -9,6 +9,8 @@ public class PostI18n {
     private String content;
     private String contentFormat;
     private String aiTags;
+    private String semanticTagsJson;
+    private String semanticTagsFingerprint;
     private String sourceType;
 
     public Long getId() {
@@ -73,6 +75,22 @@ public class PostI18n {
 
     public void setAiTags(String aiTags) {
         this.aiTags = aiTags;
+    }
+
+    public String getSemanticTagsJson() {
+        return semanticTagsJson;
+    }
+
+    public void setSemanticTagsJson(String semanticTagsJson) {
+        this.semanticTagsJson = semanticTagsJson;
+    }
+
+    public String getSemanticTagsFingerprint() {
+        return semanticTagsFingerprint;
+    }
+
+    public void setSemanticTagsFingerprint(String semanticTagsFingerprint) {
+        this.semanticTagsFingerprint = semanticTagsFingerprint;
     }
 
     public String getSourceType() {

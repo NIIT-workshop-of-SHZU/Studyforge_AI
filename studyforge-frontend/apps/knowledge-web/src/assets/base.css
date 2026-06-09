@@ -2435,6 +2435,7 @@ meter::-webkit-meter-optimum-value {
 .profile-page,
 .favorites-page,
 .account-page,
+.learning-memory-page,
 .friends-page,
 .notifications-page {
   display: grid;

@@ -1,7 +1,11 @@
 package com.studyforge.ai.service;
 
 public interface AiService {
-    String generateSummary(String content, String language);
+    default String generateSummary(String content, String language) {
+        return generateSummary(content, language, "");
+    }
+
+    String generateSummary(String content, String language, String userContext);
 
     String generateTags(String content, String language);
 
@@ -11,9 +15,23 @@ public interface AiService {
 
     String moderateContent(String content, String language);
 
-    String answerQuestion(String postContent, String question, String answerLanguage);
+    default String answerQuestion(String postContent, String question, String answerLanguage) {
+        return answerQuestion(postContent, question, answerLanguage, "");
+    }
 
-    String generateQuiz(String postContent, String language);
+    String answerQuestion(String postContent, String question, String answerLanguage, String userContext);
+
+    default String generateQuiz(String postContent, String language) {
+        return generateQuiz(postContent, language, "");
+    }
+
+    String generateQuiz(String postContent, String language, String userContext);
+
+    String refreshUserLearningProfile(String signalsPayload, String language);
+
+    String extractPostSemanticTags(String title, String summary, String language);
+
+    String extractMemorySemanticTags(String memoryMd, String language);
 
     String formatMarkdown(String content, String language);
 

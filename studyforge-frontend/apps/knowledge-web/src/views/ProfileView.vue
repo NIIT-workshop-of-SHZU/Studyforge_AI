@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router';
 import {
   BookOpen,
   BookmarkCheck,
+  Brain,
   CircleHelp,
   Eye,
   Heart,
@@ -315,6 +316,11 @@ watch(
           <BookmarkCheck :size="24" />
           <strong>收藏夹</strong>
           <span>按主题整理文章</span>
+        </RouterLink>
+        <RouterLink class="profile-shortcut-card" to="/memory">
+          <Brain :size="24" />
+          <strong>MEMORY.md</strong>
+          <span>阅读与编辑学习画像</span>
         </RouterLink>
         <RouterLink class="profile-shortcut-card" to="/friends">
           <MessageCircle :size="24" />

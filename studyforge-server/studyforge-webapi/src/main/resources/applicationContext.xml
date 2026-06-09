@@ -37,6 +37,7 @@
                   value="com.studyforge.system.mapper,
                          com.studyforge.content.mapper,
                          com.studyforge.interaction.mapper,
+                         com.studyforge.interaction.learning.mapper,
                          com.studyforge.ai.mapper,
                          com.studyforge.voice.mapper,
                          com.studyforge.help.mapper,

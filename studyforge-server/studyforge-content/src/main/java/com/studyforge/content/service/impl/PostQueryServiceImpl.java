@@ -122,6 +122,15 @@ public class PostQueryServiceImpl implements PostQueryService {
     }
 
     @Override
+    public PostSummaryVO getSummary(Long postId, String languageCode) {
+        Post post = postMapper.selectById(postId);
+        if (post == null || !"PUBLISHED".equals(post.getStatus())) {
+            return null;
+        }
+        return toSummary(post, normalizeLanguage(languageCode));
+    }
+
+    @Override
     public List<PostSummaryVO> listHistory(Long userId, String languageCode, int limit) {
         int normalizedLimit = normalizeLimit(limit, 30);
         return postMapper.selectHistoryByUser(userId, normalizedLimit)

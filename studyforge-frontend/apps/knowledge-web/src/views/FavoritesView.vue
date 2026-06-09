@@ -1,25 +1,36 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import { BookmarkCheck, FolderPlus, LogIn, RefreshCw, Trash2 } from '@lucide/vue';
-import { createCollection, getCollectionPosts, getMyCollections, removePostFromCollection } from '@/api/collections';
+import { BookmarkCheck, FolderPlus, LogIn, Pin, RefreshCw, Settings, Trash2 } from '@lucide/vue';
+import {
+  createCollection,
+  getCollectionPosts,
+  getMyCollections,
+  patchCollectionPost,
+  removePostFromCollection
+} from '@/api/collections';
+import { getLearningMemory } from '@/api/learningMemory';
 import { ApiError } from '@/api/http';
 import EmptyState from '@/components/EmptyState.vue';
 import KnowledgeCard from '@/components/KnowledgeCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
-import type { FavoriteCollection, PostSummary, TopicCategory } from '@/types/api';
+import type { FavoriteCollection, InterestTag, PostSummary, TopicCategory } from '@/types/api';
 
 const sessionStore = useSessionStore();
 const preferencesStore = usePreferencesStore();
 
 const collections = ref<FavoriteCollection[]>([]);
 const posts = ref<PostSummary[]>([]);
+const interestTags = ref<InterestTag[]>([]);
 const activeCollectionId = ref<number | null>(null);
+const sortMode = ref<'importance' | 'recent'>('importance');
+const activeTag = ref('');
 const loading = ref(false);
 const postLoading = ref(false);
 const errorMessage = ref('');
+const expandedReasons = ref<number | null>(null);
 const form = reactive({
   name: '',
   description: '',
@@ -28,6 +39,7 @@ const form = reactive({
 
 const activeCollection = computed(() => collections.value.find((collection) => collection.collectionId === activeCollectionId.value) ?? collections.value[0] ?? null);
 const totalSaved = computed(() => collections.value.reduce((total, collection) => total + collection.itemCount, 0));
+const tagFilters = computed(() => interestTags.value.slice(0, 8));
 
 const categories: Record<string, TopicCategory> = {
   TECHNOLOGY: { code: 'TECHNOLOGY', name: '技术实践', description: '前端、后端、工具', accent: '#2563eb' },
@@ -41,6 +53,15 @@ function categoryFor(post: PostSummary): TopicCategory {
   return categories[post.categoryCode] ?? { code: post.categoryCode, name: post.categoryCode, description: '', accent: '#0f766e' };
 }
 
+async function loadLearningMemory() {
+  try {
+    const memory = await getLearningMemory();
+    interestTags.value = memory.interestTags ?? [];
+  } catch {
+    interestTags.value = [];
+  }
+}
+
 async function loadCollections() {
   if (!sessionStore.isAuthenticated) {
     return;
@@ -49,6 +70,7 @@ async function loadCollections() {
   errorMessage.value = '';
 
   try {
+    await loadLearningMemory();
     collections.value = await getMyCollections();
     activeCollectionId.value = activeCollectionId.value ?? collections.value[0]?.collectionId ?? null;
     await loadPosts();
@@ -72,7 +94,10 @@ async function loadPosts() {
 
   postLoading.value = true;
   try {
-    posts.value = await getCollectionPosts(activeCollection.value.collectionId, preferencesStore.languageCode);
+    posts.value = await getCollectionPosts(activeCollection.value.collectionId, preferencesStore.languageCode, {
+      sort: sortMode.value,
+      tag: activeTag.value || undefined
+    });
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '这个收藏夹暂时打不开';
   } finally {
@@ -82,6 +107,16 @@ async function loadPosts() {
 
 async function selectCollection(collectionId: number) {
   activeCollectionId.value = collectionId;
+  await loadPosts();
+}
+
+async function changeSort(mode: 'importance' | 'recent') {
+  sortMode.value = mode;
+  await loadPosts();
+}
+
+async function changeTag(tag: string) {
+  activeTag.value = activeTag.value === tag ? '' : tag;
   await loadPosts();
 }
 
@@ -120,6 +155,21 @@ async function removePost(postId: number) {
   );
 }
 
+async function togglePin(post: PostSummary) {
+  if (!activeCollection.value) {
+    return;
+  }
+  const nextPinned = !post.pinned;
+  await patchCollectionPost(activeCollection.value.collectionId, post.postId, preferencesStore.languageCode, {
+    pinned: nextPinned
+  });
+  await loadPosts();
+}
+
+function toggleReasons(postId: number) {
+  expandedReasons.value = expandedReasons.value === postId ? null : postId;
+}
+
 onMounted(loadCollections);
 
 watch(
@@ -133,7 +183,7 @@ watch(
     <div class="page-heading">
       <span class="section-kicker">Collections</span>
       <h1>收藏夹</h1>
-      <p>把值得反复看的文章按主题收好，读完之后也能找得回来。</p>
+      <p>把值得反复看的文章按主题收好，重要的内容会自动排到前面。</p>
     </div>
 
     <div v-if="!sessionStore.isAuthenticated" class="login-required">
@@ -158,6 +208,10 @@ watch(
           <span>已整理文章</span>
           <strong>{{ totalSaved }}</strong>
         </div>
+        <RouterLink class="secondary-button" to="/memory">
+          <Settings :size="17" />
+          <span>MEMORY.md</span>
+        </RouterLink>
         <button class="secondary-button" type="button" :disabled="loading" @click="loadCollections">
           <RefreshCw :size="17" />
           <span>刷新</span>
@@ -207,14 +261,54 @@ watch(
             <span>{{ posts.length }} 篇</span>
           </div>
 
+          <div class="favorites-sort-bar">
+            <button class="secondary-button" :class="{ active: sortMode === 'importance' }" type="button" @click="changeSort('importance')">
+              对我更重要
+            </button>
+            <button class="secondary-button" :class="{ active: sortMode === 'recent' }" type="button" @click="changeSort('recent')">
+              最近收藏
+            </button>
+          </div>
+
+          <div v-if="tagFilters.length" class="favorites-tag-bar">
+            <button
+              v-for="tag in tagFilters"
+              :key="tag.tag"
+              class="secondary-button tag-chip"
+              :class="{ active: activeTag === tag.tag }"
+              type="button"
+              @click="changeTag(tag.tag)"
+            >
+              {{ tag.tag }}
+            </button>
+          </div>
+
           <LoadingState v-if="postLoading" label="正在打开收藏夹" />
           <div v-else-if="posts.length" class="collection-post-list">
             <article v-for="(post, index) in posts" :key="post.postId" class="collection-post-card">
+              <div v-if="post.pinned" class="pin-badge">已置顶</div>
+              <div v-if="sortMode === 'importance' && post.importanceScore != null" class="importance-badge">
+                匹配度 {{ Math.round(post.importanceScore * 100) }}%
+              </div>
               <KnowledgeCard :post="post" :category="categoryFor(post)" :index="index" />
-              <button class="secondary-button remove-button" type="button" @click="removePost(post.postId)">
-                <Trash2 :size="16" />
-                <span>移出</span>
-              </button>
+              <div v-if="post.rankReasons?.length" class="rank-reasons">
+                <button class="text-button" type="button" @click="toggleReasons(post.postId)">
+                  {{ expandedReasons === post.postId ? '收起推荐原因' : '为何靠前' }}
+                </button>
+                <ul v-if="expandedReasons === post.postId">
+                  <li v-for="reason in post.rankReasons" :key="reason">{{ reason }}</li>
+                </ul>
+              </div>
+              <div class="collection-post-actions">
+                <button class="secondary-button" type="button" @click="togglePin(post)">
+                  <Pin :size="16" />
+                  <span>{{ post.pinned ? '取消置顶' : '置顶' }}</span>
+                </button>
+                <button class="secondary-button remove-button" type="button" @click="removePost(post.postId)">
+                  <Trash2 :size="16" />
+                  <span>移出</span>
+                </button>
+              </div>
             </article>
           </div>
           <EmptyState v-else title="这个收藏夹还没有文章" description="在文章详情页点收藏后，会先进入默认收藏；你也可以在这里继续新建主题收藏夹。" />
@@ -223,3 +317,66 @@ watch(
     </template>
   </section>
 </template>
+
+<style scoped>
+.favorites-sort-bar,
+.favorites-tag-bar,
+.collection-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.favorites-sort-bar,
+.favorites-tag-bar {
+  margin-bottom: 1rem;
+}
+
+.secondary-button.active {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+
+.tag-chip {
+  font-size: 0.85rem;
+}
+
+.pin-badge,
+.importance-badge {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  margin-right: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.pin-badge {
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.importance-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.rank-reasons {
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.rank-reasons ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.text-button {
+  border: none;
+  background: none;
+  color: #0f766e;
+  cursor: pointer;
+  padding: 0;
+}
+</style>

@@ -15,13 +15,32 @@ export function createCollection(payload: CreateCollectionPayload) {
   return unwrap<FavoriteCollection>(http.post('/collections', payload));
 }
 
-export function getCollectionPosts(collectionId: number | string, languageCode: string) {
+export function getCollectionPosts(
+  collectionId: number | string,
+  languageCode: string,
+  options?: { sort?: 'importance' | 'recent'; tag?: string }
+) {
   return unwrap<PostSummary[]>(
     http.get(`/collections/${collectionId}/posts`, {
       params: {
         languageCode,
+        sort: options?.sort ?? 'importance',
+        tag: options?.tag || undefined,
         limit: 30
       }
+    })
+  );
+}
+
+export function patchCollectionPost(
+  collectionId: number | string,
+  postId: number | string,
+  languageCode: string,
+  payload: { pinned?: boolean }
+) {
+  return unwrap<void>(
+    http.patch(`/collections/${collectionId}/posts/${postId}`, payload, {
+      params: { languageCode }
     })
   );
 }

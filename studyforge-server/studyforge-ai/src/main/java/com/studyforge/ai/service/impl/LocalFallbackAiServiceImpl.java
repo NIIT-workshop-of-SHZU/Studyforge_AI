@@ -1,10 +1,13 @@
 package com.studyforge.ai.service.impl;
 
 import com.studyforge.ai.service.AiService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class LocalFallbackAiServiceImpl implements AiService {
     @Override
-    public String generateSummary(String content, String language) {
+    public String generateSummary(String content, String language, String userContext) {
         String normalized = trimContent(content, 220);
         if (normalized.isBlank()) {
             return isEnglish(language)
@@ -63,7 +66,7 @@ public class LocalFallbackAiServiceImpl implements AiService {
     }
 
     @Override
-    public String answerQuestion(String postContent, String question, String answerLanguage) {
+    public String answerQuestion(String postContent, String question, String answerLanguage, String userContext) {
         if (!isEnglish(answerLanguage)) {
             return "AI 服务暂时不可用。请先阅读文章内容，或在管理端检查模型配置后再试。";
         }
@@ -73,7 +76,7 @@ public class LocalFallbackAiServiceImpl implements AiService {
     }
 
     @Override
-    public String generateQuiz(String postContent, String language) {
+    public String generateQuiz(String postContent, String language, String userContext) {
         String source = trimContent(postContent, 160);
         if (!isEnglish(language)) {
             return """
@@ -123,6 +126,59 @@ public class LocalFallbackAiServiceImpl implements AiService {
                 - 具体步骤
                 - 参考链接或代码
                 """.formatted(source);
+    }
+
+    @Override
+    public String refreshUserLearningProfile(String signalsPayload, String language) {
+        return "";
+    }
+
+    @Override
+    public String extractPostSemanticTags(String title, String summary, String language) {
+        String source = ((title == null ? "" : title) + " " + (summary == null ? "" : summary)).trim();
+        if (source.isBlank()) {
+            return "[]";
+        }
+        List<String> tags = new ArrayList<>();
+        String lowered = source.toLowerCase(Locale.ROOT);
+        if (lowered.contains("vue")) {
+            tags.add("{\"tag\":\"Vue\",\"weight\":0.9}");
+        }
+        if (source.contains("前端") || lowered.contains("frontend")) {
+            tags.add("{\"tag\":\"前端\",\"weight\":0.82}");
+        }
+        if (lowered.contains("spring")) {
+            tags.add("{\"tag\":\"Spring\",\"weight\":0.85}");
+        }
+        if (lowered.contains("mybatis")) {
+            tags.add("{\"tag\":\"MyBatis\",\"weight\":0.8}");
+        }
+        if (tags.isEmpty()) {
+            tags.add("{\"tag\":\"学习笔记\",\"weight\":0.6}");
+        }
+        return "[" + String.join(",", tags) + "]";
+    }
+
+    @Override
+    public String extractMemorySemanticTags(String memoryMd, String language) {
+        if (memoryMd == null || memoryMd.isBlank()) {
+            return "[]";
+        }
+        List<String> tags = new ArrayList<>();
+        String text = memoryMd.toLowerCase(Locale.ROOT);
+        if (text.contains("vue")) {
+            tags.add("{\"tag\":\"Vue\",\"weight\":0.95,\"polarity\":\"like\"}");
+        }
+        if (memoryMd.contains("前端")) {
+            tags.add("{\"tag\":\"前端\",\"weight\":0.9,\"polarity\":\"like\"}");
+        }
+        if (text.contains("不喜欢") && (text.contains("英文") || text.contains("english"))) {
+            tags.add("{\"tag\":\"英文文章\",\"weight\":0.88,\"polarity\":\"dislike\"}");
+        }
+        if (tags.isEmpty()) {
+            tags.add("{\"tag\":\"学习\",\"weight\":0.6,\"polarity\":\"like\"}");
+        }
+        return "[" + String.join(",", tags) + "]";
     }
 
     @Override

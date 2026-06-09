@@ -12,6 +12,8 @@ import com.studyforge.common.exception.BizException;
 import com.studyforge.common.exception.ErrorCode;
 import com.studyforge.content.service.PostQueryService;
 import com.studyforge.content.vo.PostDetailVO;
+import com.studyforge.interaction.learning.service.FavoriteImportanceService;
+import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.system.service.AuthService;
 import com.studyforge.system.service.UploadedFileService;
 import com.studyforge.webapi.support.UploadStorage;
@@ -38,18 +40,24 @@ public class AiController {
     private final PostQueryService postQueryService;
     private final AuthService authService;
     private final UploadedFileService uploadedFileService;
+    private final UserLearningProfileService userLearningProfileService;
+    private final FavoriteImportanceService favoriteImportanceService;
     private final Path imageRoot;
 
     public AiController(AiService aiService,
                         AiLogMapper aiLogMapper,
                         PostQueryService postQueryService,
                         AuthService authService,
-                        UploadedFileService uploadedFileService) {
+                        UploadedFileService uploadedFileService,
+                        UserLearningProfileService userLearningProfileService,
+                        FavoriteImportanceService favoriteImportanceService) {
         this.aiService = aiService;
         this.aiLogMapper = aiLogMapper;
         this.postQueryService = postQueryService;
         this.authService = authService;
         this.uploadedFileService = uploadedFileService;
+        this.userLearningProfileService = userLearningProfileService;
+        this.favoriteImportanceService = favoriteImportanceService;
         this.imageRoot = UploadStorage.imageRoot();
     }
 
@@ -61,8 +69,10 @@ public class AiController {
         String contentLanguage = contentLanguage(request);
         String promptLanguage = promptLanguage(request);
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        String text = aiService.generateSummary(post.content(), promptLanguage);
+        String userContext = userLearningProfileService.getMemoryContext(userId);
+        String text = aiService.generateSummary(post.content(), promptLanguage, userContext);
         log(userId, postId, "SUMMARY", post.content(), text, 1);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("SUMMARY", promptLanguage, text));
     }
 
@@ -74,8 +84,10 @@ public class AiController {
         String contentLanguage = contentLanguage(request);
         String promptLanguage = promptLanguage(request);
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        String text = aiService.generateQuiz(post.content(), promptLanguage);
+        String userContext = userLearningProfileService.getMemoryContext(userId);
+        String text = aiService.generateQuiz(post.content(), promptLanguage, userContext);
         log(userId, postId, "REVIEW_CARD", post.content(), text, 1);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("REVIEW_CARD", promptLanguage, text));
     }
 
@@ -87,8 +99,10 @@ public class AiController {
         String contentLanguage = request == null || isBlank(request.contentLanguageCode()) ? answerLanguage(request) : request.contentLanguageCode();
         String promptLanguage = request == null || isBlank(request.promptLanguageCode()) ? answerLanguage(request) : request.promptLanguageCode();
         PostDetailVO post = postQueryService.getDetail(postId, contentLanguage);
-        String text = aiService.answerQuestion(post.content(), request == null ? "" : request.question(), promptLanguage);
+        String userContext = userLearningProfileService.getMemoryContext(userId);
+        String text = aiService.answerQuestion(post.content(), request == null ? "" : request.question(), promptLanguage, userContext);
         log(userId, postId, "QUESTION", request == null ? "" : request.question(), text, 1);
+        favoriteImportanceService.recomputeAllForUser(userId, contentLanguage);
         return ApiResponse.success(new AiResultVO("QUESTION", promptLanguage, text));
     }
 
