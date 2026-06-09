@@ -1406,6 +1406,10 @@ svg {
   content: "";
 }
 
+.knowledge-card--clickable {
+  cursor: pointer;
+}
+
 .knowledge-card:hover {
   border-color: color-mix(in srgb, var(--category-color) 38%, var(--border));
   box-shadow: var(--shadow);
@@ -1610,13 +1614,9 @@ svg {
 }
 
 .card-actions {
-  display: grid;
-  grid-template-columns: auto minmax(128px, 1fr);
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
-}
-
-.card-actions .card-link:first-child:last-child {
-  grid-column: 1 / -1;
 }
 
 .insight-column {

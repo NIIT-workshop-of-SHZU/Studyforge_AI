@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
-import { ArrowUpRight, CalendarClock, Eye, Heart, Languages, MessageCircle, PencilLine, UserRound } from '@lucide/vue';
+import { RouterLink, useRouter } from 'vue-router';
+import { CalendarClock, Eye, Heart, Languages, MessageCircle, PencilLine, UserRound } from '@lucide/vue';
 import topicAiUrl from '@/assets/topic-ai.svg';
 import topicHelpUrl from '@/assets/topic-help.svg';
 import topicLearningUrl from '@/assets/topic-learning.svg';
@@ -18,8 +18,13 @@ const props = defineProps<{
   index: number;
 }>();
 
+const router = useRouter();
 const sessionStore = useSessionStore();
 const preferencesStore = usePreferencesStore();
+
+function openPost() {
+  router.push({ path: `/posts/${props.post.postId}`, query: { language: props.post.languageCode } });
+}
 
 const coverUrl = computed(() => {
   const covers: Record<string, string> = {
@@ -38,19 +43,21 @@ const copy = computed(() =>
   preferencesStore.languageCode === 'en_US'
     ? {
         editTitle: 'Edit post',
-        edit: 'Edit',
-        open: 'Read Post'
+        edit: 'Edit'
       }
     : {
         editTitle: '编辑帖子',
-        edit: '编辑',
-        open: '阅读全文'
+        edit: '编辑'
       }
 );
 </script>
 
 <template>
-  <article class="knowledge-card" :style="{ '--category-color': category.accent, '--card-delay': `${index * 55}ms` }">
+  <article
+    class="knowledge-card knowledge-card--clickable"
+    :style="{ '--category-color': category.accent, '--card-delay': `${index * 55}ms` }"
+    @click="openPost"
+  >
     <img class="knowledge-cover" :src="coverUrl" alt="" loading="eager" />
 
     <div class="knowledge-card-body">
@@ -71,7 +78,7 @@ const copy = computed(() =>
       <h2>{{ post.title }}</h2>
       <p>{{ post.summary }}</p>
 
-      <RouterLink class="card-author" :to="`/users/${post.authorId}`">
+      <RouterLink class="card-author" :to="`/users/${post.authorId}`" @click.stop>
         <img v-if="post.authorAvatarUrl" :src="post.authorAvatarUrl" alt="" loading="lazy" />
         <span v-else>
           <UserRound :size="14" />
@@ -95,14 +102,10 @@ const copy = computed(() =>
           </span>
         </div>
 
-        <div class="card-actions">
-          <RouterLink v-if="canEdit" class="card-edit-link" :to="`/posts/${post.postId}/edit`" :title="copy.editTitle">
+        <div v-if="canEdit" class="card-actions">
+          <RouterLink class="card-edit-link" :to="`/posts/${post.postId}/edit`" :title="copy.editTitle" @click.stop>
             <PencilLine :size="16" />
             <span>{{ copy.edit }}</span>
-          </RouterLink>
-          <RouterLink class="card-link" :to="{ path: `/posts/${post.postId}`, query: { language: post.languageCode } }">
-            <span>{{ copy.open }}</span>
-            <ArrowUpRight :size="17" />
           </RouterLink>
         </div>
       </div>
