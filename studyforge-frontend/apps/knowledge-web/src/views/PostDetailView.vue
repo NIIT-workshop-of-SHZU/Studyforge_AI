@@ -43,7 +43,6 @@ import { formatDateTime, formatShortDateTime } from '@/utils/date';
 
 interface ForumThreadNode {
   id: number;
-  parentId: number | null;
   userId: number;
   authorUsername: string;
   authorName: string;
@@ -212,7 +211,7 @@ async function likeComment(node: ForumThreadNode) {
   }
 }
 
-async function removeComment(node: ForumThreadNode) {
+async function removeComment(node: ForumThreadNode): Promise<void> {
   if (!window.confirm('确定删除这条评论吗？删除后会保留楼层和回复关系。')) {
     return;
   }
@@ -301,9 +300,8 @@ function buildCommentTree(items: CommentItem[]): ForumThreadNode[] {
   const roots: ForumThreadNode[] = [];
 
   for (const comment of [...items].sort((a, b) => (a.floorNo || 0) - (b.floorNo || 0))) {
-    nodes.set(comment.commentId, {
+    const node: ForumThreadNode = {
       id: comment.commentId,
-      parentId: comment.parentCommentId,
       userId: comment.userId,
       authorUsername: comment.authorUsername || `user_${comment.userId}`,
       authorName: comment.authorName || comment.authorUsername || `#${comment.userId}`,
@@ -317,12 +315,17 @@ function buildCommentTree(items: CommentItem[]): ForumThreadNode[] {
       deleted: comment.deleted,
       createdLabel: commentTime(comment),
       replies: []
-    });
+    };
+    nodes.set(comment.commentId, node);
   }
 
-  for (const node of nodes.values()) {
-    if (node.parentId && nodes.has(node.parentId)) {
-      nodes.get(node.parentId)?.replies.push(node);
+  // 构建树形结构（内部使用 parentId，但不暴露给外部）
+  for (const comment of items) {
+    const node = nodes.get(comment.commentId);
+    if (!node) continue;
+    
+    if (comment.parentCommentId && nodes.has(comment.parentCommentId)) {
+      nodes.get(comment.parentCommentId)?.replies.push(node);
     } else {
       roots.push(node);
     }

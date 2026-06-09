@@ -14,6 +14,7 @@ import {
   Star,
   UserRound
 } from '@lucide/vue';
+import { getMyAiUsage, type AiUserUsage } from '@/api/ai-usage';
 import { ApiError } from '@/api/http';
 import { getUserHomepage } from '@/api/homepages';
 import {
@@ -36,7 +37,7 @@ import { useSessionStore } from '@/stores/session';
 import type { PostSummary, TopicCategory, UserActivity, UserHomepage, UserProfile } from '@/types/api';
 import { formatShortDateTime } from '@/utils/date';
 
-type ProfileTab = 'activity' | 'posts';
+type ProfileTab = 'activity' | 'posts' | 'ai-usage';
 
 const route = useRoute();
 const preferencesStore = usePreferencesStore();
@@ -46,6 +47,7 @@ const profile = ref<UserProfile | null>(null);
 const homepage = ref<UserHomepage | null>(null);
 const posts = ref<PostSummary[]>([]);
 const activities = ref<UserActivity[]>([]);
+const aiUsage = ref<AiUserUsage | null>(null);
 const loading = ref(false);
 const actionLoading = ref(false);
 const errorMessage = ref('');
@@ -106,7 +108,26 @@ const copy = computed(() => {
       commented: 'commented on a post',
       liked: 'liked a post',
       favorited: 'saved a post',
-      openContent: 'Open content'
+      openContent: 'Open content',
+      calls: 'calls',
+      aiUsageTab: 'AI Usage',
+      aiUsageTitle: 'AI Usage Statistics',
+      noAiUsage: 'No AI usage records',
+      totalCalls: 'Total Calls',
+      totalTokens: 'Total Tokens',
+      totalCost: 'Total Cost',
+      successRate: 'Success Rate',
+      tokenUsage: 'Token Statistics',
+      promptTokens: 'Prompt Tokens',
+      completionTokens: 'Completion Tokens',
+      featureUsage: 'Feature Distribution',
+      summary: 'Summary',
+      reviewCard: 'Review Cards',
+      qa: 'Q&A',
+      markdownFormat: 'Markdown Format',
+      callResults: 'Call Results',
+      success: 'Success',
+      failed: 'Failed'
     };
   }
 
@@ -159,7 +180,26 @@ const copy = computed(() => {
     commented: '评论了帖子',
     liked: '点赞了帖子',
     favorited: '收藏了帖子',
-    openContent: '打开'
+    openContent: '打开',
+    calls: '次',
+    aiUsageTab: 'AI 用量',
+    aiUsageTitle: 'AI 使用统计',
+    noAiUsage: '暂无 AI 使用记录',
+    totalCalls: '总调用次数',
+    totalTokens: '总 Token',
+    totalCost: '总费用',
+    successRate: '成功率',
+    tokenUsage: 'Token 使用情况',
+    promptTokens: '输入 Token',
+    completionTokens: '输出 Token',
+    featureUsage: '功能使用分布',
+    summary: '摘要生成',
+    reviewCard: '复习卡片',
+    qa: '问答',
+    markdownFormat: 'Markdown 格式化',
+    callResults: '调用结果统计',
+    success: '成功',
+    failed: '失败'
   };
 });
 
@@ -181,6 +221,7 @@ async function loadProfile() {
     homepage.value = null;
     posts.value = [];
     activities.value = [];
+    aiUsage.value = null;
     return;
   }
   if (!targetUserId.value) {
@@ -193,6 +234,9 @@ async function loadProfile() {
   try {
     const profileData = isMeRoute.value ? await getMyProfile() : await getUserProfile(targetUserId.value);
     profile.value = profileData;
+    if (!profileData.self && activeTab.value === 'ai-usage') {
+      activeTab.value = 'activity';
+    }
     const [homepageData, postData, activityData] = await Promise.all([
       getUserHomepage(profileData.userId),
       getUserPosts(profileData.userId, preferencesStore.languageCode),
@@ -201,6 +245,17 @@ async function loadProfile() {
     homepage.value = homepageData;
     posts.value = postData;
     activities.value = activityData;
+
+    if (profileData.self) {
+      try {
+        aiUsage.value = await getMyAiUsage();
+      } catch (error) {
+        console.warn('Failed to load AI usage:', error);
+        aiUsage.value = null;
+      }
+    } else {
+      aiUsage.value = null;
+    }
   } catch (error) {
     if (error instanceof ApiError && error.code === 4010) {
       await sessionStore.logout();
@@ -339,6 +394,7 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
       <nav class="profile-tabs" :aria-label="copy.tabsAria">
         <button type="button" :class="{ active: activeTab === 'activity' }" @click="activeTab = 'activity'">{{ copy.activity }}</button>
         <button type="button" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">{{ copy.posts }}</button>
+        <button v-if="profile.self" type="button" :class="{ active: activeTab === 'ai-usage' }" @click="activeTab = 'ai-usage'">{{ copy.aiUsageTab }}</button>
       </nav>
 
       <section v-if="activeTab === 'activity'" class="profile-content-grid">
@@ -397,10 +453,289 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
         </aside>
       </section>
 
-      <section v-else class="knowledge-grid compact-grid">
+      <section v-else-if="activeTab === 'posts'" class="knowledge-grid compact-grid">
         <KnowledgeCard v-for="(post, index) in posts" :key="post.postId" :post="post" :category="categoryFor(post)" :index="index" />
         <EmptyState v-if="posts.length === 0" :title="copy.noPosts" :description="copy.noPostsDesc" />
+      </section>
+
+      <section v-else-if="profile.self && activeTab === 'ai-usage'" class="ai-usage-section">
+        <h2>{{ copy.aiUsageTitle }}</h2>
+        
+        <div v-if="!aiUsage" class="empty-usage">
+          <p>{{ copy.noAiUsage }}</p>
+        </div>
+        
+        <template v-else>
+          <!-- 概览卡片 -->
+          <div class="usage-overview-cards">
+            <div class="usage-card">
+              <div class="card-content">
+                <div class="card-value">{{ aiUsage.totalCalls || 0 }}</div>
+                <div class="card-label">{{ copy.totalCalls }}</div>
+              </div>
+            </div>
+            <div class="usage-card">
+              <div class="card-content">
+                <div class="card-value">{{ aiUsage.totalTokens || 0 }}</div>
+                <div class="card-label">{{ copy.totalTokens }}</div>
+              </div>
+            </div>
+            <div class="usage-card">
+              <div class="card-content">
+                <div class="card-value">¥{{ Number(aiUsage.totalCostYuan || 0).toFixed(4) }}</div>
+                <div class="card-label">{{ copy.totalCost }}</div>
+              </div>
+            </div>
+            <div class="usage-card">
+              <div class="card-content">
+                <div class="card-value">{{ aiUsage.successRate || 0 }}%</div>
+                <div class="card-label">{{ copy.successRate }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Token 详情 -->
+          <div class="usage-details">
+            <h3>{{ copy.tokenUsage }}</h3>
+            <div class="token-breakdown">
+              <div class="token-item">
+                <span class="token-label">{{ copy.promptTokens }}</span>
+                <span class="token-value">{{ aiUsage.totalPromptTokens || 0 }}</span>
+              </div>
+              <div class="token-item">
+                <span class="token-label">{{ copy.completionTokens }}</span>
+                <span class="token-value">{{ aiUsage.totalCompletionTokens || 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 功能分布 -->
+          <div class="usage-details">
+            <h3>{{ copy.featureUsage }}</h3>
+            <div class="feature-distribution">
+              <div class="feature-item">
+                <span class="feature-name">{{ copy.summary }}</span>
+                <span class="feature-count">{{ aiUsage.summaryCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-name">{{ copy.reviewCard }}</span>
+                <span class="feature-count">{{ aiUsage.reviewCardCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-name">{{ copy.qa }}</span>
+                <span class="feature-count">{{ aiUsage.questionCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-name">{{ copy.markdownFormat }}</span>
+                <span class="feature-count">{{ aiUsage.markdownFormatCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 成功/失败统计 -->
+          <div class="usage-details">
+            <h3>{{ copy.callResults }}</h3>
+            <div class="result-stats">
+              <div class="result-item success">
+                <span class="result-label">{{ copy.success }}</span>
+                <span class="result-value">{{ aiUsage.successfulCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+              <div class="result-item failed">
+                <span class="result-label">{{ copy.failed }}</span>
+                <span class="result-value">{{ aiUsage.failedCalls || 0 }} {{ copy.calls }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </section>
     </template>
   </section>
 </template>
+
+<style scoped>
+/* AI 用量页面样式 */
+.ai-usage-section {
+  padding: 24px;
+  background: #f9fafb;
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.ai-usage-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.empty-usage {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+/* 概览卡片 */
+.usage-overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.usage-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.usage-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.card-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* 详情区域 */
+.usage-details {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.usage-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+/* Token 分解 */
+.token-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.token-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.token-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.token-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 功能分布 */
+.feature-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.feature-item:hover {
+  background: #f3f4f6;
+}
+
+.feature-name {
+  font-size: 14px;
+  color: #374151;
+}
+
+.feature-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 结果统计 */
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.result-item.success {
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+}
+
+.result-item.failed {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+}
+
+.result-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.result-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.result-item.success .result-value {
+  color: #059669;
+}
+
+.result-item.failed .result-value {
+  color: #dc2626;
+}
+</style>

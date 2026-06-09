@@ -7,8 +7,13 @@ public class AiLog {
     private Long userId;
     private Long postId;
     private String aiType;
+    private String modelName;
     private String requestText;
     private String responseText;
+    private Integer promptTokens;
+    private Integer completionTokens;
+    private Integer totalTokens;
+    private java.math.BigDecimal costYuan;
     private Integer success;
     private LocalDateTime createdTime;
 
@@ -44,6 +49,14 @@ public class AiLog {
         this.aiType = aiType;
     }
 
+    public String getModelName() {
+        return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
     public String getRequestText() {
         return requestText;
     }
@@ -58,6 +71,38 @@ public class AiLog {
 
     public void setResponseText(String responseText) {
         this.responseText = responseText;
+    }
+
+    public Integer getPromptTokens() {
+        return promptTokens;
+    }
+
+    public void setPromptTokens(Integer promptTokens) {
+        this.promptTokens = promptTokens;
+    }
+
+    public Integer getCompletionTokens() {
+        return completionTokens;
+    }
+
+    public void setCompletionTokens(Integer completionTokens) {
+        this.completionTokens = completionTokens;
+    }
+
+    public Integer getTotalTokens() {
+        return totalTokens;
+    }
+
+    public void setTotalTokens(Integer totalTokens) {
+        this.totalTokens = totalTokens;
+    }
+
+    public java.math.BigDecimal getCostYuan() {
+        return costYuan;
+    }
+
+    public void setCostYuan(java.math.BigDecimal costYuan) {
+        this.costYuan = costYuan;
     }
 
     public Integer getSuccess() {

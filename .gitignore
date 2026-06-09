@@ -14,6 +14,7 @@ coverage/
 uploads/
 api配置.md
 jdbc.properties
+.lingma/
 .env
 .env.*
 !.env.example

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import {
+  Activity,
   BookOpen,
   Database,
   LayoutDashboard,
@@ -92,6 +93,10 @@ async function handleLogout() {
         <RouterLink to="/homepage-reviews">
           <LayoutTemplate :size="18" />
           <span>{{ copy.homepageReviews }}</span>
+        </RouterLink>
+        <RouterLink to="/ai-dashboard">
+          <Activity :size="18" />
+          <span>AI 监控</span>
         </RouterLink>
         <RouterLink to="/settings">
           <Settings :size="18" />
