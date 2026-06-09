@@ -4,6 +4,7 @@ import AdminDashboardView from '@/views/AdminDashboardView.vue';
 import AiDashboardView from '@/views/AiDashboardView.vue';
 import CommunityManageView from '@/views/CommunityManageView.vue';
 import FeedView from '@/views/FeedView.vue';
+import HomepageReviewView from '@/views/HomepageReviewView.vue';
 import LoginView from '@/views/LoginView.vue';
 import PostDetailView from '@/views/PostDetailView.vue';
 import SettingsView from '@/views/SettingsView.vue';
@@ -45,6 +46,11 @@ export const router = createRouter({
       component: CommunityManageView
     },
     {
+      path: '/homepage-reviews',
+      name: 'homepage-reviews',
+      component: HomepageReviewView
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: SettingsView
@@ -60,6 +66,7 @@ export const router = createRouter({
 router.beforeEach((to) => {
   const authStore = useAuthStore();
   authStore.hydrate();
+  authStore.syncFromStorage();
 
   if (!to.meta.public && !authStore.isAuthenticated) {
     return {

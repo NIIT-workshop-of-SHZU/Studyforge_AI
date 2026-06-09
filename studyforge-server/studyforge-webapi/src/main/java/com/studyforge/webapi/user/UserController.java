@@ -98,6 +98,13 @@ public class UserController {
         return ApiResponse.success(userProfileService.unfollow(viewerId, userId));
     }
 
+    @PostMapping("/{userId}/unfollow")
+    public ApiResponse<UserProfileVO> unfollowCompatibility(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                                            @PathVariable("userId") Long userId) {
+        Long viewerId = authService.requireUserId(authorization);
+        return ApiResponse.success(userProfileService.unfollow(viewerId, userId));
+    }
+
     @GetMapping("/{userId}/followers")
     public ApiResponse<List<SocialUserVO>> followers(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
                                                      @PathVariable("userId") Long userId,

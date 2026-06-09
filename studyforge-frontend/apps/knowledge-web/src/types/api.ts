@@ -71,6 +71,52 @@ export interface UploadedFile {
   size: number;
 }
 
+export interface UserHomepage {
+  homepageId: number;
+  userId: number;
+  templateType: string;
+  layoutMode: 'default' | 'code' | 'media' | string;
+  themeConfig: string;
+  customCodeDraft: string;
+  mediaLayoutDraft: string;
+  publishedTemplateType: string;
+  publishedLayoutMode: 'default' | 'code' | 'media' | string;
+  publishedThemeConfig: string;
+  publishedCustomCode: string;
+  publishedMediaLayout: string;
+  publishedVersion: number;
+  reviewStatus: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | string;
+  submittedAt: string | number[] | null;
+  reviewDeadlineAt: string | number[] | null;
+  reviewComment: string;
+  communityTemplateId: number | null;
+  self: boolean;
+}
+
+export interface CommunityHomepageDesign {
+  designId: number;
+  authorId: number;
+  authorName: string;
+  authorAvatarUrl: string;
+  title: string;
+  summary: string;
+  templateType: string;
+  layoutMode: 'default' | 'code' | 'media' | string;
+  themeConfig: string;
+  customCode: string;
+  mediaLayout: string;
+  status: string;
+  submittedAt: string | number[] | null;
+  reviewDeadlineAt: string | number[] | null;
+  reviewComment: string;
+  cloneCount: number;
+  likeCount: number;
+  favoriteCount: number;
+  commentCount: number;
+  createdTime: string | number[] | null;
+  canClone: boolean;
+}
+
 export interface PostInteractionState {
   liked: boolean;
   favorited: boolean;

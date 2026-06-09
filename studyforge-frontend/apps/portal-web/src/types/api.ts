@@ -149,3 +149,23 @@ export interface IntegrationSetting {
   createdTime: string | null;
   updatedTime: string | null;
 }
+
+export interface AdminHomepageReview {
+  targetType: 'USER_HOMEPAGE' | 'COMMUNITY_DESIGN' | string;
+  targetId: number;
+  ownerId: number;
+  ownerName: string;
+  ownerAvatarUrl: string;
+  title: string;
+  summary: string;
+  templateType: string;
+  layoutMode: string;
+  themeConfig: string;
+  customCode: string;
+  mediaLayout: string;
+  reviewStatus: string;
+  submittedAt: string | number[] | null;
+  reviewDeadlineAt: string | number[] | null;
+  reviewComment: string;
+  overdue: boolean;
+}

@@ -1,5 +1,5 @@
 import { http, unwrap } from '@/api/http';
-import type { AdminOverview, AdminPost, AdminReport, AdminUser, AdminUserDetail } from '@/types/api';
+import type { AdminHomepageReview, AdminOverview, AdminPost, AdminReport, AdminUser, AdminUserDetail } from '@/types/api';
 
 export interface AdminListQuery {
   status?: string;
@@ -85,6 +85,24 @@ export function updateUserStatus(userId: number | string, status: string, remark
   return unwrap<AdminUser>(
     http.post(`/admin/community/users/${userId}/status`, {
       status,
+      remark
+    })
+  );
+}
+
+export function getHomepageReviews(status = 'PENDING_REVIEW', limit = 30) {
+  return unwrap<AdminHomepageReview[]>(
+    http.get('/admin/homepages/reviews', {
+      params: { status, limit }
+    })
+  );
+}
+
+export function reviewHomepage(targetId: number | string, targetType: string, decision: string, remark = '') {
+  return unwrap<AdminHomepageReview>(
+    http.post(`/admin/homepages/${targetId}/review`, {
+      targetType,
+      decision,
       remark
     })
   );

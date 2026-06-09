@@ -288,6 +288,7 @@ button {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
+  flex-wrap: wrap;
 }
 
 .section-heading {
@@ -946,6 +947,73 @@ tr:last-child td {
   background: rgba(255, 255, 255, 0.78);
 }
 
+.homepage-design-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.homepage-design-card {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.homepage-design-meta,
+.homepage-design-stats {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.homepage-design-meta strong,
+.homepage-design-meta span,
+.homepage-design-card p,
+.homepage-design-stats span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.homepage-design-meta strong {
+  color: #f8fafc;
+  line-height: 1.4;
+}
+
+.homepage-design-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.homepage-design-stats span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.32rem 0.62rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.homepage-code-dump {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: #020617;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
 .wide-input input {
   width: min(330px, 48vw);
 }
@@ -1048,6 +1116,32 @@ tr:last-child td {
 .table-actions .secondary-button {
   min-height: 34px;
   padding: 0 10px;
+}
+
+.homepage-design-card .table-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: stretch;
+}
+
+.homepage-design-card .table-actions > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.homepage-design-card .table-actions .secondary-button,
+.homepage-design-card .table-actions .primary-button,
+.management-toolbar .select-field,
+.moderation-remark,
+.moderation-remark input {
+  min-width: 0;
+}
+
+.homepage-design-card .table-actions .secondary-button,
+.homepage-design-card .table-actions .primary-button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .danger-action {

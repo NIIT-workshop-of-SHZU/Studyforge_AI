@@ -2,6 +2,14 @@ import type { LoginSession } from '@/types/api';
 
 export const SESSION_STORAGE_KEY = 'studyforge.knowledge.session';
 
+function notifyStorageChanged() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent('studyforge:knowledge-session-changed'));
+}
+
 export function readStoredSession(): LoginSession | null {
   if (typeof window === 'undefined') {
     return null;
@@ -23,8 +31,10 @@ export function readStoredSession(): LoginSession | null {
 
 export function writeStoredSession(session: LoginSession) {
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  notifyStorageChanged();
 }
 
 export function clearStoredSession() {
   window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  notifyStorageChanged();
 }

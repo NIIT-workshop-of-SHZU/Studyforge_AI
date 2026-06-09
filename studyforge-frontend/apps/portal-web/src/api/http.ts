@@ -1,5 +1,5 @@
 import axios, { AxiosError, type AxiosResponse } from 'axios';
-import { readStoredSession } from '@/stores/authStorage';
+import { clearStoredSession, readStoredSession } from '@/stores/authStorage';
 import type { ApiEnvelope } from '@/types/api';
 
 export class ApiError extends Error {
@@ -22,12 +22,15 @@ export const http = axios.create({
   }
 });
 
+function isAuthFailureCode(code: number) {
+  return code === 401 || code === 403 || code === 4010 || code === 4030;
+}
+
 http.interceptors.request.use((config) => {
   const session = readStoredSession();
 
   if (session?.accessToken) {
     config.headers.Authorization = `Bearer ${session.accessToken}`;
-    config.headers['X-User-Role'] = session.role;
   }
 
   return config;
@@ -38,19 +41,30 @@ http.interceptors.response.use(
     const body = response.data as Partial<ApiEnvelope<unknown>>;
 
     if (typeof body?.code === 'number' && body.code !== 0) {
-      throw new ApiError(body.message || '请求没有成功', body.code, body.requestId);
+      if (isAuthFailureCode(body.code)) {
+        clearStoredSession();
+      }
+      throw new ApiError(body.message || 'Request failed.', body.code, body.requestId);
     }
 
     return response;
   },
   (error: AxiosError<ApiEnvelope<unknown>>) => {
     const responseBody = error.response?.data;
+    const statusCode = error.response?.status;
+
+    if (statusCode === 401 || statusCode === 403) {
+      clearStoredSession();
+    }
 
     if (responseBody && typeof responseBody.code === 'number') {
+      if (isAuthFailureCode(responseBody.code)) {
+        clearStoredSession();
+      }
       return Promise.reject(new ApiError(responseBody.message, responseBody.code, responseBody.requestId));
     }
 
-    return Promise.reject(new ApiError(error.message || '网络连接失败'));
+    return Promise.reject(new ApiError(error.message || 'Network connection failed.'));
   }
 );
 

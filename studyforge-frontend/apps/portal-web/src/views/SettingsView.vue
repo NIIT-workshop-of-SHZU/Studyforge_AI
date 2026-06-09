@@ -3,8 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { ImagePlus, KeyRound, RefreshCw, Save, Volume2 } from '@lucide/vue';
 import { getIntegrationSettings, saveIntegrationSettings } from '@/api/settings';
 import LoadingState from '@/components/LoadingState.vue';
+import { usePreferencesStore } from '@/stores/preferences';
 import type { IntegrationSetting } from '@/types/api';
 
+const preferencesStore = usePreferencesStore();
 const settings = ref<IntegrationSetting[]>([]);
 const loading = ref(false);
 const saving = ref(false);
@@ -15,6 +17,43 @@ const aiSettings = computed(() => settings.value.filter((item) => item.settingKe
 const voiceSettings = computed(() => settings.value.filter((item) => item.settingKey.startsWith('voice.')));
 const imageSettings = computed(() => settings.value.filter((item) => item.settingKey.startsWith('image.')));
 
+const copy = computed(() => {
+  if (preferencesStore.languageCode === 'en_US') {
+    return {
+      eyebrow: 'Integrations',
+      title: 'AI, Voice, and Image Settings',
+      refresh: 'Refresh',
+      save: 'Save',
+      saving: 'Saving',
+      loading: 'Loading settings',
+      unavailable: 'Settings are unavailable',
+      saved: 'Saved.',
+      aiPanel: 'Text AI',
+      aiNote: 'Used for summaries, review cards, Q&A, and AI-assisted composition.',
+      voicePanel: 'Voice Service',
+      voiceNote: 'Used for speech input, recordings, and audio transcription.',
+      imagePanel: 'Cover Image Generation',
+      imageNote: 'Used for article cover generation based on title, summary, and body content.'
+    };
+  }
+  return {
+    eyebrow: 'Integrations',
+    title: 'AI、语音与生图设置',
+    refresh: '刷新',
+    save: '保存',
+    saving: '保存中',
+    loading: '正在读取设置',
+    unavailable: '设置暂时不可用',
+    saved: '已保存。',
+    aiPanel: '文本 AI',
+    aiNote: '用于 AI 摘要、复习卡片、问答和 AI 排版。',
+    voicePanel: '语音服务',
+    voiceNote: '用于语音输入、录音和学习内容转写。',
+    imagePanel: '封面生图',
+    imageNote: '用于根据标题、摘要和正文自动生成博客风格封面图。'
+  };
+});
+
 async function loadSettings() {
   loading.value = true;
   errorMessage.value = '';
@@ -23,7 +62,7 @@ async function loadSettings() {
   try {
     settings.value = await getIntegrationSettings();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '设置暂时没取到';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
   } finally {
     loading.value = false;
   }
@@ -36,30 +75,34 @@ async function saveSettings() {
 
   try {
     await saveIntegrationSettings(settings.value);
-    savedMessage.value = '已保存';
+    savedMessage.value = copy.value.saved;
     await loadSettings();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '设置暂时保存不了';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.unavailable;
   } finally {
     saving.value = false;
   }
 }
 
 function label(key: string) {
-  const labels: Record<string, string> = {
-    'ai.base_url': 'AI Base URL',
-    'ai.api_key': 'AI API Key',
-    'ai.chat_model': '文本模型',
-    'voice.base_url': '语音 Base URL',
-    'voice.api_key': '语音 API Key',
-    'voice.model': '语音模型',
-    'voice.name': '语音音色',
-    'image.base_url': '生图 Base URL',
-    'image.api_key': '生图 API Key',
-    'image.model': '生图模型',
-    'image.size': '封面尺寸'
+  const labels: Record<string, { zh: string; en: string }> = {
+    'ai.base_url': { zh: 'AI Base URL', en: 'AI Base URL' },
+    'ai.api_key': { zh: 'AI API Key', en: 'AI API Key' },
+    'ai.chat_model': { zh: '文本模型', en: 'Chat Model' },
+    'voice.base_url': { zh: '语音 Base URL', en: 'Voice Base URL' },
+    'voice.api_key': { zh: '语音 API Key', en: 'Voice API Key' },
+    'voice.model': { zh: '语音模型', en: 'Voice Model' },
+    'voice.name': { zh: '语音音色', en: 'Voice Persona' },
+    'image.base_url': { zh: '生图 Base URL', en: 'Image Base URL' },
+    'image.api_key': { zh: '生图 API Key', en: 'Image API Key' },
+    'image.model': { zh: '生图模型', en: 'Image Model' },
+    'image.size': { zh: '封面尺寸', en: 'Cover Size' }
   };
-  return labels[key] ?? key;
+  const localized = labels[key];
+  if (!localized) {
+    return key;
+  }
+  return preferencesStore.languageCode === 'en_US' ? localized.en : localized.zh;
 }
 
 onMounted(loadSettings);
@@ -69,23 +112,23 @@ onMounted(loadSettings);
   <section class="page-section">
     <div class="page-header">
       <div class="section-heading">
-        <span>Integrations</span>
-        <h1>AI、语音与生图设置</h1>
+        <span>{{ copy.eyebrow }}</span>
+        <h1>{{ copy.title }}</h1>
       </div>
 
       <div class="toolbar">
         <button class="secondary-button" type="button" :disabled="loading" @click="loadSettings">
           <RefreshCw :size="17" />
-          <span>刷新</span>
+          <span>{{ copy.refresh }}</span>
         </button>
         <button class="primary-button" type="button" :disabled="saving" @click="saveSettings">
           <Save :size="17" />
-          <span>{{ saving ? '保存中' : '保存' }}</span>
+          <span>{{ saving ? copy.saving : copy.save }}</span>
         </button>
       </div>
     </div>
 
-    <LoadingState v-if="loading" label="正在读取设置" />
+    <LoadingState v-if="loading" :label="copy.loading" />
     <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
     <p v-if="savedMessage" class="form-success">{{ savedMessage }}</p>
 
@@ -93,9 +136,9 @@ onMounted(loadSettings);
       <section class="settings-panel">
         <div class="settings-panel-title">
           <KeyRound :size="19" />
-          <span>文本 AI</span>
+          <span>{{ copy.aiPanel }}</span>
         </div>
-        <p class="settings-panel-note">用于 AI 摘要、复习卡片、文章问答和 AI 排版。</p>
+        <p class="settings-panel-note">{{ copy.aiNote }}</p>
         <label v-for="setting in aiSettings" :key="setting.settingKey">
           <span>{{ label(setting.settingKey) }}</span>
           <input v-model.trim="setting.settingValue" :type="setting.secretFlag ? 'password' : 'text'" />
@@ -105,9 +148,9 @@ onMounted(loadSettings);
       <section class="settings-panel">
         <div class="settings-panel-title">
           <Volume2 :size="19" />
-          <span>语音服务</span>
+          <span>{{ copy.voicePanel }}</span>
         </div>
-        <p class="settings-panel-note">用于用户侧语音输入、语音记录和学习内容转写。</p>
+        <p class="settings-panel-note">{{ copy.voiceNote }}</p>
         <label v-for="setting in voiceSettings" :key="setting.settingKey">
           <span>{{ label(setting.settingKey) }}</span>
           <input v-model.trim="setting.settingValue" :type="setting.secretFlag ? 'password' : 'text'" />
@@ -117,9 +160,9 @@ onMounted(loadSettings);
       <section class="settings-panel">
         <div class="settings-panel-title">
           <ImagePlus :size="19" />
-          <span>封面生图</span>
+          <span>{{ copy.imagePanel }}</span>
         </div>
-        <p class="settings-panel-note">用于用户发布文章时的“生成封面”，会根据标题、摘要和正文生成博客风格封面图。</p>
+        <p class="settings-panel-note">{{ copy.imageNote }}</p>
         <label v-for="setting in imageSettings" :key="setting.settingKey">
           <span>{{ label(setting.settingKey) }}</span>
           <input v-model.trim="setting.settingValue" :type="setting.secretFlag ? 'password' : 'text'" />

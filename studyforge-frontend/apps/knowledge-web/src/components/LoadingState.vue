@@ -1,17 +1,25 @@
 <template>
   <div class="loading-state" role="status" aria-live="polite">
     <span class="loading-dot" />
-    <span>{{ label }}</span>
+    <span>{{ resolvedLabel }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-withDefaults(
-  defineProps<{
-    label?: string;
-  }>(),
-  {
-    label: '加载中'
+import { computed } from 'vue';
+import { usePreferencesStore } from '@/stores/preferences';
+
+const props = defineProps<{
+  label?: string;
+}>();
+
+const preferencesStore = usePreferencesStore();
+
+const resolvedLabel = computed(() => {
+  if (props.label) {
+    return props.label;
   }
-);
+
+  return preferencesStore.languageCode === 'en_US' ? 'Loading' : '加载中';
+});
 </script>
