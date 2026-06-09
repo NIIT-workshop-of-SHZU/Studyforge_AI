@@ -384,6 +384,11 @@ watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.lang
       />
 
       <section v-if="profile.self" class="profile-shortcuts">
+        <RouterLink class="profile-shortcut-card" to="/friends">
+          <MessageCircle :size="24" />
+          <strong>{{ copy.friends }}</strong>
+          <span>{{ copy.friendsDesc }}</span>
+        </RouterLink>
         <RouterLink class="profile-shortcut-card" to="/memory">
           <Brain :size="24" />
           <strong>{{ copy.memory }}</strong>

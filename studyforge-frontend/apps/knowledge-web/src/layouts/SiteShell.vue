@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { Bell, BookOpen, CircleHelp, Home, Library, LogIn, LogOut, PenLine, Search, Settings, UserRound } from '@lucide/vue';
+import { Bell, BookOpen, CircleHelp, Home, Library, LogIn, LogOut, MessageCircle, PenLine, Search, Settings, UserRound } from '@lucide/vue';
 import { getUnreadNotificationCount } from '@/api/notifications';
 import studyforgeLogo from '@/assets/studyforge-logo-mark.png';
 import { usePreferencesStore, type LanguageCode } from '@/stores/preferences';
@@ -76,6 +76,11 @@ function closeUserMenu() {
 async function goToProfile() {
   closeUserMenu();
   await router.push('/me');
+}
+
+async function goToFriends() {
+  closeUserMenu();
+  await router.push('/friends');
 }
 
 async function handleLogout() {
@@ -193,6 +198,10 @@ watch(
             <button type="button" role="menuitem" @click="goToProfile">
               <UserRound :size="16" />
               <span>{{ copy.profile }}</span>
+            </button>
+            <button type="button" role="menuitem" @click="goToFriends">
+              <MessageCircle :size="16" />
+              <span>{{ copy.friends }}</span>
             </button>
             <button type="button" role="menuitem" @click="handleLogout">
               <LogOut :size="16" />
