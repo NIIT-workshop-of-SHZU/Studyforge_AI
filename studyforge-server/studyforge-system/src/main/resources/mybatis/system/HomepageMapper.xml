@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studyforge.system.mapper.HomepageMapper">
+    <resultMap id="UserHomepageResultMap" type="com.studyforge.system.entity.UserHomepage">
+        <id column="homepage_id" property="homepageId"/>
+        <result column="user_id" property="userId"/>
+        <result column="template_type" property="templateType"/>
+        <result column="layout_mode" property="layoutMode"/>
+        <result column="theme_config" property="themeConfig"/>
+        <result column="custom_code_draft" property="customCodeDraft"/>
+        <result column="media_layout_draft" property="mediaLayoutDraft"/>
+        <result column="published_template_type" property="publishedTemplateType"/>
+        <result column="published_layout_mode" property="publishedLayoutMode"/>
+        <result column="published_theme_config" property="publishedThemeConfig"/>
+        <result column="published_custom_code" property="publishedCustomCode"/>
+        <result column="published_media_layout" property="publishedMediaLayout"/>
+        <result column="published_version" property="publishedVersion"/>
+        <result column="review_status" property="reviewStatus"/>
+        <result column="submitted_at" property="submittedAt"/>
+        <result column="review_deadline_at" property="reviewDeadlineAt"/>
+        <result column="reviewed_by" property="reviewedBy"/>
+        <result column="reviewed_at" property="reviewedAt"/>
+        <result column="review_comment" property="reviewComment"/>
+        <result column="community_template_id" property="communityTemplateId"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <resultMap id="CommunityHomepageDesignResultMap" type="com.studyforge.system.entity.CommunityHomepageDesign">
+        <id column="design_id" property="designId"/>
+        <result column="author_id" property="authorId"/>
+        <result column="source_homepage_id" property="sourceHomepageId"/>
+        <result column="title" property="title"/>
+        <result column="summary" property="summary"/>
+        <result column="template_type" property="templateType"/>
+        <result column="layout_mode" property="layoutMode"/>
+        <result column="theme_config" property="themeConfig"/>
+        <result column="custom_code" property="customCode"/>
+        <result column="media_layout" property="mediaLayout"/>
+        <result column="status" property="status"/>
+        <result column="submitted_at" property="submittedAt"/>
+        <result column="review_deadline_at" property="reviewDeadlineAt"/>
+        <result column="reviewed_by" property="reviewedBy"/>
+        <result column="reviewed_at" property="reviewedAt"/>
+        <result column="review_comment" property="reviewComment"/>
+        <result column="clone_count" property="cloneCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="favorite_count" property="favoriteCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+        <result column="author_name" property="authorName"/>
+        <result column="author_avatar_url" property="authorAvatarUrl"/>
+    </resultMap>
+
+    <sql id="UserHomepageColumns">
+        homepage_id,
+        user_id,
+        template_type,
+        layout_mode,
+        theme_config,
+        custom_code_draft,
+        media_layout_draft,
+        published_template_type,
+        published_layout_mode,
+        published_theme_config,
+        published_custom_code,
+        published_media_layout,
+        published_version,
+        review_status,
+        submitted_at,
+        review_deadline_at,
+        reviewed_by,
+        reviewed_at,
+        review_comment,
+        community_template_id,
+        created_time,
+        updated_time
+    </sql>
+
+    <sql id="CommunityDesignColumns">
+        d.design_id,
+        d.author_id,
+        d.source_homepage_id,
+        d.title,
+        d.summary,
+        d.template_type,
+        d.layout_mode,
+        d.theme_config,
+        d.custom_code,
+        d.media_layout,
+        d.status,
+        d.submitted_at,
+        d.review_deadline_at,
+        d.reviewed_by,
+        d.reviewed_at,
+        d.review_comment,
+        d.clone_count,
+        d.like_count,
+        d.favorite_count,
+        d.comment_count,
+        d.created_time,
+        d.updated_time,
+        COALESCE(NULLIF(u.display_name, ''), u.username) AS author_name,
+        u.avatar_url AS author_avatar_url
+    </sql>
+
+    <select id="selectUserHomepageByUserId" resultMap="UserHomepageResultMap">
+        SELECT
+        <include refid="UserHomepageColumns"/>
+        FROM user_homepages
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectUserHomepageById" resultMap="UserHomepageResultMap">
+        SELECT
+        <include refid="UserHomepageColumns"/>
+        FROM user_homepages
+        WHERE homepage_id = #{homepageId}
+    </select>
+
+    <insert id="insertUserHomepage" parameterType="com.studyforge.system.entity.UserHomepage" useGeneratedKeys="true" keyProperty="homepageId">
+        INSERT INTO user_homepages (
+            user_id,
+            template_type,
+            layout_mode,
+            theme_config,
+            custom_code_draft,
+            media_layout_draft,
+            published_template_type,
+            published_layout_mode,
+            published_theme_config,
+            published_custom_code,
+            published_media_layout,
+            published_version,
+            review_status,
+            community_template_id
+        )
+        VALUES (
+            #{userId},
+            #{templateType},
+            #{layoutMode},
+            #{themeConfig},
+            #{customCodeDraft},
+            #{mediaLayoutDraft},
+            #{publishedTemplateType},
+            #{publishedLayoutMode},
+            #{publishedThemeConfig},
+            #{publishedCustomCode},
+            #{publishedMediaLayout},
+            COALESCE(#{publishedVersion}, 0),
+            #{reviewStatus},
+            #{communityTemplateId}
+        )
+    </insert>
+
+    <update id="updateUserHomepageDraft" parameterType="com.studyforge.system.entity.UserHomepage">
+        UPDATE user_homepages
+        SET
+            template_type = #{templateType},
+            layout_mode = #{layoutMode},
+            theme_config = #{themeConfig},
+            custom_code_draft = #{customCodeDraft},
+            media_layout_draft = #{mediaLayoutDraft},
+            review_status = 'DRAFT',
+            submitted_at = NULL,
+            review_deadline_at = NULL,
+            reviewed_by = NULL,
+            reviewed_at = NULL,
+            review_comment = '',
+            community_template_id = #{communityTemplateId}
+        WHERE homepage_id = #{homepageId}
+    </update>
+
+    <update id="submitUserHomepage">
+        UPDATE user_homepages
+        SET
+            review_status = 'PENDING_REVIEW',
+            submitted_at = CURRENT_TIMESTAMP,
+            review_deadline_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 48 HOUR),
+            reviewed_by = NULL,
+            reviewed_at = NULL,
+            review_comment = ''
+        WHERE homepage_id = #{homepageId}
+    </update>
+
+    <update id="approveUserHomepage">
+        UPDATE user_homepages
+        SET
+            published_template_type = template_type,
+            published_layout_mode = layout_mode,
+            published_theme_config = theme_config,
+            published_custom_code = custom_code_draft,
+            published_media_layout = media_layout_draft,
+            published_version = published_version + 1,
+            review_status = 'APPROVED',
+            reviewed_by = #{adminId},
+            reviewed_at = CURRENT_TIMESTAMP,
+            review_comment = #{remark}
+        WHERE homepage_id = #{homepageId}
+    </update>
+
+    <update id="rejectUserHomepage">
+        UPDATE user_homepages
+        SET
+            review_status = 'REJECTED',
+            reviewed_by = #{adminId},
+            reviewed_at = CURRENT_TIMESTAMP,
+            review_comment = #{remark}
+        WHERE homepage_id = #{homepageId}
+    </update>
+
+    <update id="updateUserHomepageCommunityTemplate">
+        UPDATE user_homepages
+        SET community_template_id = #{designId}
+        WHERE homepage_id = #{homepageId}
+    </update>
+
+    <select id="selectCommunityDesignById" resultMap="CommunityHomepageDesignResultMap">
+        SELECT
+        <include refid="CommunityDesignColumns"/>
+        FROM community_homepage_designs d
+        JOIN users u ON u.user_id = d.author_id
+        WHERE d.design_id = #{designId}
+    </select>
+
+    <select id="selectApprovedCommunityDesigns" resultMap="CommunityHomepageDesignResultMap">
+        SELECT
+        <include refid="CommunityDesignColumns"/>
+        FROM community_homepage_designs d
+        JOIN users u ON u.user_id = d.author_id
+        WHERE d.status = 'APPROVED'
+        <if test="keyword != null and keyword != ''">
+            AND (
+                d.title LIKE CONCAT('%', #{keyword}, '%')
+                OR d.summary LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.display_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY d.created_time DESC, d.design_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insertCommunityDesign" parameterType="com.studyforge.system.entity.CommunityHomepageDesign" useGeneratedKeys="true" keyProperty="designId">
+        INSERT INTO community_homepage_designs (
+            author_id,
+            source_homepage_id,
+            title,
+            summary,
+            template_type,
+            layout_mode,
+            theme_config,
+            custom_code,
+            media_layout,
+            status,
+            submitted_at,
+            review_deadline_at,
+            review_comment
+        )
+        VALUES (
+            #{authorId},
+            #{sourceHomepageId},
+            #{title},
+            #{summary},
+            #{templateType},
+            #{layoutMode},
+            #{themeConfig},
+            #{customCode},
+            #{mediaLayout},
+            #{status},
+            CURRENT_TIMESTAMP,
+            DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 48 HOUR),
+            #{reviewComment}
+        )
+    </insert>
+
+    <update id="approveCommunityDesign">
+        UPDATE community_homepage_designs
+        SET
+            status = 'APPROVED',
+            reviewed_by = #{adminId},
+            reviewed_at = CURRENT_TIMESTAMP,
+            review_comment = #{remark}
+        WHERE design_id = #{designId}
+    </update>
+
+    <update id="rejectCommunityDesign">
+        UPDATE community_homepage_designs
+        SET
+            status = 'REJECTED',
+            reviewed_by = #{adminId},
+            reviewed_at = CURRENT_TIMESTAMP,
+            review_comment = #{remark}
+        WHERE design_id = #{designId}
+    </update>
+
+    <update id="incrementCommunityCloneCount">
+        UPDATE community_homepage_designs
+        SET clone_count = clone_count + 1
+        WHERE design_id = #{designId}
+    </update>
+
+    <sql id="HomepageReviewUnion">
+        SELECT
+            'USER_HOMEPAGE' AS targetType,
+            uh.homepage_id AS targetId,
+            uh.user_id AS ownerId,
+            COALESCE(NULLIF(u.display_name, ''), u.username) AS ownerName,
+            u.avatar_url AS ownerAvatarUrl,
+            CONCAT(COALESCE(NULLIF(u.display_name, ''), u.username), ' Homepage') AS title,
+            'Personal homepage draft submitted for review.' AS summary,
+            uh.template_type AS templateType,
+            uh.layout_mode AS layoutMode,
+            uh.theme_config AS themeConfig,
+            uh.custom_code_draft AS customCode,
+            uh.media_layout_draft AS mediaLayout,
+            uh.review_status AS reviewStatus,
+            uh.submitted_at AS submittedAt,
+            uh.review_deadline_at AS reviewDeadlineAt,
+            uh.review_comment AS reviewComment,
+            CASE WHEN uh.review_status = 'PENDING_REVIEW' AND uh.review_deadline_at &lt; CURRENT_TIMESTAMP THEN 1 ELSE 0 END AS overdue
+        FROM user_homepages uh
+        JOIN users u ON u.user_id = uh.user_id
+        UNION ALL
+        SELECT
+            'COMMUNITY_DESIGN' AS targetType,
+            d.design_id AS targetId,
+            d.author_id AS ownerId,
+            COALESCE(NULLIF(u.display_name, ''), u.username) AS ownerName,
+            u.avatar_url AS ownerAvatarUrl,
+            d.title AS title,
+            d.summary AS summary,
+            d.template_type AS templateType,
+            d.layout_mode AS layoutMode,
+            d.theme_config AS themeConfig,
+            d.custom_code AS customCode,
+            d.media_layout AS mediaLayout,
+            d.status AS reviewStatus,
+            d.submitted_at AS submittedAt,
+            d.review_deadline_at AS reviewDeadlineAt,
+            d.review_comment AS reviewComment,
+            CASE WHEN d.status = 'PENDING_REVIEW' AND d.review_deadline_at &lt; CURRENT_TIMESTAMP THEN 1 ELSE 0 END AS overdue
+        FROM community_homepage_designs d
+        JOIN users u ON u.user_id = d.author_id
+    </sql>
+
+    <select id="selectHomepageReviews" resultType="map">
+        SELECT *
+        FROM (
+        <include refid="HomepageReviewUnion"/>
+        ) review_items
+        <where>
+            reviewStatus &lt;&gt; 'DRAFT'
+            <if test="status != null and status != '' and status != 'ALL'">
+                AND reviewStatus = #{status}
+            </if>
+        </where>
+        ORDER BY
+            CASE WHEN reviewStatus = 'PENDING_REVIEW' THEN 0 ELSE 1 END,
+            overdue DESC,
+            submittedAt DESC,
+            targetId DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectHomepageReview" resultType="map">
+        SELECT *
+        FROM (
+        <include refid="HomepageReviewUnion"/>
+        ) review_items
+        WHERE targetType = #{targetType}
+          AND targetId = #{targetId}
+    </select>
+
+    <insert id="insertAudit">
+        INSERT INTO admin_audit_logs (
+            admin_id,
+            target_type,
+            target_id,
+            action_type,
+            remark
+        )
+        VALUES (
+            #{adminId},
+            #{targetType},
+            #{targetId},
+            #{actionType},
+            #{remark}
+        )
+    </insert>
+</mapper>

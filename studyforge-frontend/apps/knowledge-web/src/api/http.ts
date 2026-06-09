@@ -22,6 +22,10 @@ export const http = axios.create({
   }
 });
 
+function isAuthFailureCode(code: number) {
+  return code === 401 || code === 403 || code === 4010 || code === 4030;
+}
+
 http.interceptors.request.use((config) => {
   const session = readStoredSession();
 
@@ -41,6 +45,9 @@ http.interceptors.response.use(
     const body = response.data as Partial<ApiEnvelope<unknown>>;
 
     if (typeof body?.code === 'number' && body.code !== 0) {
+      if (isAuthFailureCode(body.code)) {
+        clearStoredSession();
+      }
       throw new ApiError(body.message || 'Request failed.', body.code, body.requestId);
     }
 
@@ -55,7 +62,7 @@ http.interceptors.response.use(
     }
 
     if (responseBody && typeof responseBody.code === 'number') {
-      if (responseBody.code === 401 || responseBody.code === 403) {
+      if (isAuthFailureCode(responseBody.code)) {
         clearStoredSession();
       }
       return Promise.reject(new ApiError(responseBody.message, responseBody.code, responseBody.requestId));
