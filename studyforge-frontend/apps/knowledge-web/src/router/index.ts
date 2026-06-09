@@ -3,7 +3,10 @@ import { useSessionStore } from '@/stores/session';
 import HomeView from '@/views/HomeView.vue';
 import AccountSettingsView from '@/views/AccountSettingsView.vue';
 import FavoritesView from '@/views/FavoritesView.vue';
+import FollowersView from '@/views/FollowersView.vue';
+import FollowingView from '@/views/FollowingView.vue';
 import FriendsView from '@/views/FriendsView.vue';
+import HistoryView from '@/views/HistoryView.vue';
 import LandingView from '@/views/LandingView.vue';
 import LibraryView from '@/views/LibraryView.vue';
 import LoginView from '@/views/LoginView.vue';
@@ -63,6 +66,21 @@ export const router = createRouter({
       path: '/friends',
       name: 'friends',
       component: FriendsView
+    },
+    {
+      path: '/following',
+      name: 'following',
+      component: FollowingView
+    },
+    {
+      path: '/followers',
+      name: 'followers',
+      component: FollowersView
+    },
+    {
+      path: '/history',
+      name: 'history',
+      component: HistoryView
     },
     {
       path: '/notifications',

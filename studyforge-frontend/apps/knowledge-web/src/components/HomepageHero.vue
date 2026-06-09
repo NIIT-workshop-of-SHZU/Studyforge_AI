@@ -6,7 +6,6 @@ import {
   MessageCircle,
   PenLine,
   RefreshCw,
-  Settings,
   UserCheck,
   UserPlus,
   UserRound
@@ -140,11 +139,11 @@ const progressPercent = computed(() => {
 const remainingExperience = computed(() => Math.max(0, props.profile.nextLevelExperience - props.profile.experiencePoints));
 
 const heroStats = computed(() => [
-  { value: props.profile.friendCount, label: copy.value.friends },
-  { value: props.profile.followingCount, label: copy.value.followingCount },
-  { value: props.profile.followerCount, label: copy.value.followers },
-  { value: props.profile.favoriteCount, label: copy.value.favorites },
-  { value: props.profile.historyCount, label: copy.value.history }
+  { value: props.profile.friendCount, label: copy.value.friends, to: '/friends' },
+  { value: props.profile.followingCount, label: copy.value.followingCount, to: '/following' },
+  { value: props.profile.followerCount, label: copy.value.followers, to: '/followers' },
+  { value: props.profile.favoriteCount, label: copy.value.favorites, to: '/favorites' },
+  { value: props.profile.historyCount, label: copy.value.history, to: '/history' }
 ]);
 
 const codeDoc = computed(() => {
@@ -182,17 +181,9 @@ const codeDoc = computed(() => {
         <RefreshCw :size="17" />
         <span>{{ copy.refresh }}</span>
       </button>
-      <RouterLink v-if="self" class="secondary-button" to="/friends">
-        <MessageCircle :size="17" />
-        <span>{{ copy.messages }}</span>
-      </RouterLink>
       <RouterLink v-if="self" class="secondary-button" to="/homepage-studio">
         <PenLine :size="17" />
         <span>{{ copy.studio }}</span>
-      </RouterLink>
-      <RouterLink v-if="self" class="primary-button" to="/account">
-        <Settings :size="17" />
-        <span>{{ copy.editProfile }}</span>
       </RouterLink>
       <button v-if="!self" class="primary-button" type="button" :disabled="actionLoading" @click="emit('follow')">
         <UserPlus :size="17" />
@@ -226,26 +217,27 @@ const codeDoc = computed(() => {
       <div>
         <div class="profile-title-row">
           <h1>{{ profile.displayName }}</h1>
-          <span class="level-badge">Lv.{{ profile.communityLevel }}</span>
+          <span class="level-badge" tabindex="0">
+            Lv.{{ profile.communityLevel }}
+            <span class="level-tooltip" role="tooltip">
+              <span class="level-tooltip-row">
+                <strong>{{ profile.experiencePoints }}</strong>
+                <span>{{ copy.experience }}</span>
+              </span>
+              <meter min="0" max="100" :value="progressPercent" />
+              <small>{{ copy.nextLevel }} {{ remainingExperience }} XP</small>
+            </span>
+          </span>
         </div>
         <p class="profile-username">@{{ profile.username }}</p>
         <p class="profile-bio">{{ profile.bio || copy.noBio }}</p>
 
         <div class="profile-meta-stack">
-          <section class="profile-level compact">
-            <div>
-              <strong>{{ profile.experiencePoints }}</strong>
-              <span>{{ copy.experience }}</span>
-            </div>
-            <meter min="0" max="100" :value="progressPercent" />
-            <small>{{ copy.nextLevel }} {{ remainingExperience }} XP</small>
-          </section>
-
           <section class="profile-stats compact">
-            <div v-for="item in heroStats" :key="item.label">
+            <RouterLink v-for="item in heroStats" :key="item.label" :to="item.to">
               <strong>{{ item.value }}</strong>
               <span>{{ item.label }}</span>
-            </div>
+            </RouterLink>
           </section>
         </div>
       </div>
