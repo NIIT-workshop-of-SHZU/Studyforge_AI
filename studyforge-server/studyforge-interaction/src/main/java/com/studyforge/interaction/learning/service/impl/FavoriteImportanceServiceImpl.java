@@ -111,12 +111,18 @@ public class FavoriteImportanceServiceImpl implements FavoriteImportanceService 
     }
 
     private static Comparator<PostSummaryVO> importanceComparator() {
-        return Comparator.comparing(post -> Boolean.TRUE.equals(post.pinned()), Comparator.reverseOrder())
+        return Comparator.<PostSummaryVO, Boolean>comparing(
+                        post -> Boolean.TRUE.equals(post.pinned()),
+                        Comparator.reverseOrder()
+                )
                 .thenComparing(
                         PostSummaryVO::importanceScore,
                         Comparator.nullsLast(Comparator.reverseOrder())
                 )
-                .thenComparing(PostSummaryVO::createdTime, Comparator.nullsLast(Comparator.reverseOrder()));
+                .thenComparing(
+                        PostSummaryVO::createdTime,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                );
     }
 
     @Override
