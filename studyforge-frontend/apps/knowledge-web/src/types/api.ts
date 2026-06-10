@@ -320,8 +320,15 @@ export interface FriendMessage {
   receiverName: string;
   receiverAvatarUrl: string;
   content: string;
+  messageType: 'TEXT' | 'IMAGE' | 'STICKER' | string;
   read: boolean;
   createdTime: string | number[] | null;
+}
+
+export interface Sticker {
+  stickerId: number;
+  imageUrl: string;
+  sortNo: number;
 }
 
 export interface FavoriteCollection {

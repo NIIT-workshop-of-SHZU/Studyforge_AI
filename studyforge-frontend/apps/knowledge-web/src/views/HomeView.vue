@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onMounted, ref, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { Activity, BadgeCheck, BrainCircuit, Compass, RefreshCw, Search, Sparkles, TrendingUp } from '@lucide/vue';
 import { getPosts } from '@/api/posts';
 import EmptyState from '@/components/EmptyState.vue';
@@ -23,9 +23,11 @@ interface CategoryInsight {
 }
 
 const preferencesStore = usePreferencesStore();
+const route = useRoute();
+const router = useRouter();
 const posts = ref<PostSummary[]>([]);
 const activeCategory = ref('ALL');
-const keyword = ref('');
+const keyword = ref(typeof route.query.q === 'string' ? route.query.q : '');
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -76,6 +78,7 @@ const visiblePosts = computed(() => {
     .map((post, index) => ({ post, index }))
     .sort(
       (first, second) =>
+        languageRank(first.post.languageCode) - languageRank(second.post.languageCode) ||
         postTimestamp(second.post) - postTimestamp(first.post) ||
         first.index - second.index
     )
@@ -184,7 +187,43 @@ function postTimestamp(post: PostSummary) {
   return toDate(post.createdTime)?.getTime() ?? 0;
 }
 
+function languageRank(languageCode: string) {
+  return languageCode === preferencesStore.languageCode ? 0 : 1;
+}
+
 onMounted(loadPosts);
+
+watch(
+  () => preferencesStore.languageCode,
+  () => loadPosts()
+);
+
+watch(
+  () => route.query.q,
+  (value) => {
+    const nextKeyword = typeof value === 'string' ? value : '';
+    if (nextKeyword !== keyword.value) {
+      keyword.value = nextKeyword;
+    }
+  }
+);
+
+watch(keyword, (value) => {
+  const normalized = value.trim();
+  const currentQuery = typeof route.query.q === 'string' ? route.query.q : '';
+  if (normalized === currentQuery) {
+    return;
+  }
+
+  const nextQuery = { ...route.query };
+  if (normalized) {
+    nextQuery.q = normalized;
+  } else {
+    delete nextQuery.q;
+  }
+
+  void router.replace({ query: nextQuery });
+});
 </script>
 
 <template>

@@ -11,26 +11,8 @@ import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 import type { HelpAnswer, HelpRequest } from '@/types/api';
+import type { ForumThreadNode } from '@/types/forum';
 import { formatShortDateTime, toDate } from '@/utils/date';
-
-interface ForumThreadNode {
-  id: number;
-  parentId: number | null;
-  userId: number;
-  authorUsername: string;
-  authorName: string;
-  authorAvatarUrl: string;
-  parentAuthorName: string;
-  content: string;
-  floorNo: number;
-  likeCount: number;
-  likedByViewer: boolean;
-  canDelete: boolean;
-  deleted: boolean;
-  accepted?: boolean;
-  createdLabel: string;
-  replies: ForumThreadNode[];
-}
 
 const sessionStore = useSessionStore();
 const preferencesStore = usePreferencesStore();

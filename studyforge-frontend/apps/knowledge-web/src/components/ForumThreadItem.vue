@@ -5,24 +5,7 @@ import { Heart, MessageSquareReply, Trash2, UserRound } from '@lucide/vue';
 import MentionTextarea from '@/components/MentionTextarea.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { usePreferencesStore } from '@/stores/preferences';
-
-interface ForumThreadNode {
-  id: number;
-  userId: number;
-  authorUsername: string;
-  authorName: string;
-  authorAvatarUrl: string;
-  parentAuthorName: string;
-  content: string;
-  floorNo: number;
-  likeCount: number;
-  likedByViewer: boolean;
-  canDelete: boolean;
-  deleted: boolean;
-  accepted?: boolean;
-  createdLabel: string;
-  replies: ForumThreadNode[];
-}
+import type { ForumThreadNode } from '@/types/forum';
 
 const props = withDefaults(
   defineProps<{

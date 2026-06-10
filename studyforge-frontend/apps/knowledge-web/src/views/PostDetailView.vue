@@ -12,6 +12,7 @@ import {
   Languages,
   MessageSquareText,
   PencilLine,
+  Search,
   Send,
   ThumbsUp,
   Volume2
@@ -41,24 +42,8 @@ import { useSessionStore } from '@/stores/session';
 import type { AiResult, CommentItem, PostDetail, PostInteractionState, VoiceResult } from '@/types/api';
 import { categoryForCode } from '@/i18n/categories';
 import { languageLabel } from '@/i18n/labels';
+import type { ForumThreadNode } from '@/types/forum';
 import { formatDateTime, formatShortDateTime } from '@/utils/date';
-
-interface ForumThreadNode {
-  id: number;
-  userId: number;
-  authorUsername: string;
-  authorName: string;
-  authorAvatarUrl: string;
-  parentAuthorName: string;
-  content: string;
-  floorNo: number;
-  likeCount: number;
-  likedByViewer: boolean;
-  canDelete: boolean;
-  deleted: boolean;
-  createdLabel: string;
-  replies: ForumThreadNode[];
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -81,7 +66,9 @@ const actionError = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
 const postId = computed(() => String(route.params.postId));
-const contentLanguage = computed(() => (typeof route.query.language === 'string' && route.query.language ? route.query.language : undefined));
+const requestedLanguage = computed(() =>
+  typeof route.query.language === 'string' && route.query.language ? route.query.language : preferencesStore.languageCode
+);
 const postCreatedTime = computed(() => formatDateTime(post.value?.createdTime, preferencesStore.languageCode));
 const postUpdatedTime = computed(() => formatDateTime(post.value?.updatedTime, preferencesStore.languageCode));
 const commentTree = computed(() => buildCommentTree(comments.value));
@@ -143,7 +130,8 @@ const copy = computed(() => {
       afterReadingTitle: 'After reading',
       afterReadingText: 'Write three sentences with the core takeaway, then one question you still want to ask.',
       articleLanguage: 'Article language',
-      readIn: (language: string) => `Read in ${languageLabel(language)}`
+      readIn: (language: string) => `Read in ${languageLabel(language)}`,
+      relatedSearches: 'Related searches'
     };
   }
 
@@ -194,7 +182,8 @@ const copy = computed(() => {
     afterReadingTitle: '读完可以做',
     afterReadingText: '用三句话写下核心结论，再列出一个还想追问的问题。',
     articleLanguage: '文章语言',
-    readIn: (language: string) => `阅读${languageLabel(language)}版`
+    readIn: (language: string) => `阅读${languageLabel(language)}版`,
+    relatedSearches: '相关搜索'
   };
 });
 
@@ -207,13 +196,63 @@ function switchContentLanguage(language: string) {
   });
 }
 
+const relatedSearchTerms = computed(() => {
+  if (!post.value) {
+    return [];
+  }
+
+  const sourceText = [post.value.title, post.value.summary, post.value.categoryCode.replace(/_/g, ' '), post.value.authorName]
+    .filter(Boolean)
+    .join(' ');
+
+  const phraseCandidates = sourceText
+    .split(/[，。！？；、,.!?;:()\[\]{}<>《》“”"']/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2 && item.length <= 20);
+
+  const tokenCandidates = [
+    ...(sourceText.match(/[A-Za-z][A-Za-z0-9+#.-]{2,}/g) ?? []),
+    ...(sourceText.match(/[\u4e00-\u9fff]{2,10}/g) ?? [])
+  ];
+
+  const stopWords = new Set([
+    '文章',
+    '内容',
+    '相关',
+    '学习',
+    '知识',
+    'today',
+    'about',
+    'article',
+    'post'
+  ]);
+
+  const unique = new Set<string>();
+  const terms: string[] = [];
+
+  for (const raw of [...phraseCandidates, ...tokenCandidates]) {
+    const term = raw.replace(/\s+/g, ' ').trim();
+    const key = term.toLowerCase();
+    if (!term || term.length < 2 || stopWords.has(key) || unique.has(key)) {
+      continue;
+    }
+    unique.add(key);
+    terms.push(term);
+    if (terms.length >= 8) {
+      break;
+    }
+  }
+
+  return terms;
+});
+
 async function loadDetail() {
   loading.value = true;
   errorMessage.value = '';
   actionError.value = '';
 
   try {
-    post.value = await getPostDetail(postId.value, contentLanguage.value);
+    post.value = await getPostDetail(postId.value, requestedLanguage.value);
     comments.value = await getComments(postId.value);
     await loadInteractionState();
   } catch (error) {
@@ -245,7 +284,7 @@ async function loadInteractionState() {
 onMounted(loadDetail);
 
 watch(
-  () => [postId.value, contentLanguage.value],
+  () => [postId.value, requestedLanguage.value],
   () => loadDetail()
 );
 
@@ -426,6 +465,7 @@ function buildCommentTree(items: CommentItem[]): ForumThreadNode[] {
   for (const comment of [...items].sort((a, b) => (a.floorNo || 0) - (b.floorNo || 0))) {
     const node: ForumThreadNode = {
       id: comment.commentId,
+      parentId: comment.parentCommentId,
       userId: comment.userId,
       authorUsername: comment.authorUsername || `user_${comment.userId}`,
       authorName: comment.authorName || comment.authorUsername || `#${comment.userId}`,
@@ -517,6 +557,23 @@ function buildCommentTree(items: CommentItem[]): ForumThreadNode[] {
         <div class="article-content">
           <MarkdownRenderer :content="post.content" />
         </div>
+
+        <section v-if="relatedSearchTerms.length" class="related-search-section">
+          <div class="panel-title">
+            <Search :size="18" />
+            <span>{{ copy.relatedSearches }}</span>
+          </div>
+          <div class="related-search-list">
+            <RouterLink
+              v-for="term in relatedSearchTerms"
+              :key="term"
+              class="related-search-link"
+              :to="{ path: '/knowledge', query: { q: term } }"
+            >
+              {{ term }}
+            </RouterLink>
+          </div>
+        </section>
 
         <div class="article-actions">
           <RouterLink v-if="sessionStore.isAuthenticated && post.authorId === sessionStore.userId" class="secondary-button" :to="`/posts/${post.postId}/edit`">
@@ -685,5 +742,35 @@ function buildCommentTree(items: CommentItem[]): ForumThreadNode[] {
   margin: 0.55rem 0 0;
   font-size: 0.78rem;
   color: #64748b;
+}
+
+.related-search-section {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line-color, #e2e8f0);
+  border-radius: 0.9rem;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.related-search-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.related-search-link {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-color, #cbd5e1);
+  background: var(--surface-color, #ffffff);
+  color: var(--text-strong, #0f172a);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+.related-search-link:hover {
+  border-color: var(--brand-color, #0f766e);
+  color: var(--brand-color, #0f766e);
 }
 </style>

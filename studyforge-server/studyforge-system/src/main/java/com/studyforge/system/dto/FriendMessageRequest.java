@@ -1,4 +1,4 @@
 package com.studyforge.system.dto;
 
-public record FriendMessageRequest(String content) {
+public record FriendMessageRequest(String content, String messageType) {
 }
