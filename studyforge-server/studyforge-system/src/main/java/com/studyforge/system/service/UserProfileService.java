@@ -5,9 +5,12 @@ import com.studyforge.system.dto.FriendRequestCreateRequest;
 import com.studyforge.system.dto.FriendRequestReviewRequest;
 import com.studyforge.system.dto.UpdateProfileRequest;
 import com.studyforge.system.dto.UpdatePasswordRequest;
+import com.studyforge.system.dto.AddStickerRequest;
+import com.studyforge.system.dto.ReorderStickersRequest;
 import com.studyforge.system.vo.FriendMessageVO;
 import com.studyforge.system.vo.FriendRequestVO;
 import com.studyforge.system.vo.SocialUserVO;
+import com.studyforge.system.vo.StickerVO;
 import com.studyforge.system.vo.UserActivityVO;
 import com.studyforge.system.vo.UserProfileVO;
 import java.util.List;
@@ -42,4 +45,12 @@ public interface UserProfileService {
     List<FriendMessageVO> listFriendMessages(Long userId, Long friendId, int limit);
 
     FriendMessageVO sendFriendMessage(Long userId, Long friendId, FriendMessageRequest request);
+
+    List<StickerVO> listStickers(Long userId);
+
+    StickerVO addSticker(Long userId, AddStickerRequest request);
+
+    void deleteSticker(Long userId, Long stickerId);
+
+    List<StickerVO> reorderStickers(Long userId, ReorderStickersRequest request);
 }

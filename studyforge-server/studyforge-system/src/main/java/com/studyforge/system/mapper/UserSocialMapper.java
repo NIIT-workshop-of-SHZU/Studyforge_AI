@@ -65,11 +65,28 @@ public interface UserSocialMapper {
 
     int insertFriendMessage(@Param("senderId") Long senderId,
                             @Param("receiverId") Long receiverId,
-                            @Param("content") String content);
+                            @Param("content") String content,
+                            @Param("messageType") String messageType);
 
     List<Map<String, Object>> selectFriendMessages(@Param("userId") Long userId,
                                                    @Param("friendId") Long friendId,
                                                    @Param("limit") int limit);
 
     int markMessagesRead(@Param("userId") Long userId, @Param("friendId") Long friendId);
+
+    int countStickers(@Param("userId") Long userId);
+
+    List<Map<String, Object>> selectStickers(@Param("userId") Long userId);
+
+    int insertSticker(@Param("userId") Long userId,
+                      @Param("imageUrl") String imageUrl,
+                      @Param("sortNo") int sortNo);
+
+    int deleteSticker(@Param("userId") Long userId, @Param("stickerId") Long stickerId);
+
+    int updateStickerSort(@Param("userId") Long userId,
+                          @Param("stickerId") Long stickerId,
+                          @Param("sortNo") int sortNo);
+
+    Map<String, Object> selectStickerById(@Param("userId") Long userId, @Param("stickerId") Long stickerId);
 }

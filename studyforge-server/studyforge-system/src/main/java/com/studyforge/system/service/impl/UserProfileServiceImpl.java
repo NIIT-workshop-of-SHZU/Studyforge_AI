@@ -3,9 +3,11 @@ package com.studyforge.system.service.impl;
 import com.studyforge.common.enums.UserStatus;
 import com.studyforge.common.exception.BizException;
 import com.studyforge.common.exception.ErrorCode;
+import com.studyforge.system.dto.AddStickerRequest;
 import com.studyforge.system.dto.FriendMessageRequest;
 import com.studyforge.system.dto.FriendRequestCreateRequest;
 import com.studyforge.system.dto.FriendRequestReviewRequest;
+import com.studyforge.system.dto.ReorderStickersRequest;
 import com.studyforge.system.dto.UpdateProfileRequest;
 import com.studyforge.system.dto.UpdatePasswordRequest;
 import com.studyforge.system.entity.User;
@@ -16,6 +18,7 @@ import com.studyforge.system.service.UserProfileService;
 import com.studyforge.system.vo.FriendMessageVO;
 import com.studyforge.system.vo.FriendRequestVO;
 import com.studyforge.system.vo.SocialUserVO;
+import com.studyforge.system.vo.StickerVO;
 import com.studyforge.system.vo.UserActivityVO;
 import com.studyforge.system.vo.UserProfileVO;
 import java.nio.charset.StandardCharsets;
@@ -23,15 +26,23 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserProfileServiceImpl implements UserProfileService {
+    private static final List<String> DEFAULT_STICKER_URLS = List.of(
+            "/stickers/sticker-1.svg",
+            "/stickers/sticker-2.svg",
+            "/stickers/sticker-3.svg"
+    );
+
     private final UserMapper userMapper;
     private final UserSocialMapper userSocialMapper;
     private final NotificationService notificationService;
@@ -245,12 +256,106 @@ public class UserProfileServiceImpl implements UserProfileService {
         if (content.isBlank()) {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "message content is required");
         }
-        userSocialMapper.insertFriendMessage(userId, friendId, content);
+        String messageType = normalizeMessageType(request == null ? null : request.messageType());
+        userSocialMapper.insertFriendMessage(userId, friendId, content, messageType);
         return userSocialMapper.selectFriendMessages(userId, friendId, 1)
                 .stream()
                 .findFirst()
                 .map(this::toFriendMessage)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "message not found"));
+    }
+
+    @Override
+    @Transactional
+    public List<StickerVO> listStickers(Long userId) {
+        requireActiveUser(userId);
+        ensureDefaultStickers(userId);
+        return userSocialMapper.selectStickers(userId)
+                .stream()
+                .map(this::toSticker)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public StickerVO addSticker(Long userId, AddStickerRequest request) {
+        requireActiveUser(userId);
+        String imageUrl = limit(text(request == null ? null : request.imageUrl()), 512);
+        if (imageUrl.isBlank()) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "sticker image url is required");
+        }
+        int sortNo = userSocialMapper.selectStickers(userId).size() + 1;
+        userSocialMapper.insertSticker(userId, imageUrl, sortNo);
+        return userSocialMapper.selectStickers(userId)
+                .stream()
+                .filter(row -> imageUrl.equals(stringValue(row.get("imageUrl"))))
+                .reduce((first, second) -> second)
+                .map(this::toSticker)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "sticker not found"));
+    }
+
+    @Override
+    @Transactional
+    public void deleteSticker(Long userId, Long stickerId) {
+        requireActiveUser(userId);
+        if (stickerId == null) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "stickerId is required");
+        }
+        if (userSocialMapper.deleteSticker(userId, stickerId) == 0) {
+            throw new BizException(ErrorCode.NOT_FOUND, "sticker not found");
+        }
+    }
+
+    @Override
+    @Transactional
+    public List<StickerVO> reorderStickers(Long userId, ReorderStickersRequest request) {
+        requireActiveUser(userId);
+        List<Long> stickerIds = request == null || request.stickerIds() == null
+                ? List.of()
+                : request.stickerIds().stream().filter(Objects::nonNull).toList();
+        if (stickerIds.isEmpty()) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "stickerIds is required");
+        }
+        List<StickerVO> existing = listStickers(userId);
+        if (stickerIds.size() != existing.size()) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "stickerIds must include all stickers");
+        }
+        List<Long> existingIds = existing.stream().map(StickerVO::stickerId).toList();
+        if (!existingIds.containsAll(stickerIds) || !new ArrayList<>(stickerIds).containsAll(existingIds)) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "stickerIds are invalid");
+        }
+        for (int index = 0; index < stickerIds.size(); index++) {
+            userSocialMapper.updateStickerSort(userId, stickerIds.get(index), index + 1);
+        }
+        return listStickers(userId);
+    }
+
+    private void ensureDefaultStickers(Long userId) {
+        if (userSocialMapper.countStickers(userId) > 0) {
+            return;
+        }
+        for (int index = 0; index < DEFAULT_STICKER_URLS.size(); index++) {
+            userSocialMapper.insertSticker(userId, DEFAULT_STICKER_URLS.get(index), index + 1);
+        }
+    }
+
+    private StickerVO toSticker(Map<String, Object> row) {
+        return new StickerVO(
+                longValue(row.get("stickerId")),
+                stringValue(row.get("imageUrl")),
+                intValue(row.get("sortNo"))
+        );
+    }
+
+    private String normalizeMessageType(String messageType) {
+        String normalized = text(messageType).toUpperCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return "TEXT";
+        }
+        if (!normalized.equals("TEXT") && !normalized.equals("IMAGE") && !normalized.equals("STICKER")) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "unsupported message type");
+        }
+        return normalized;
     }
 
     private User requireActiveUser(Long userId) {
@@ -388,6 +493,10 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     private FriendMessageVO toFriendMessage(Map<String, Object> row) {
+        String messageType = stringValue(row.get("messageType"));
+        if (messageType.isBlank()) {
+            messageType = "TEXT";
+        }
         return new FriendMessageVO(
                 longValue(row.get("messageId")),
                 longValue(row.get("senderId")),
@@ -397,6 +506,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                 stringValue(row.get("receiverDisplayName")),
                 stringValue(row.get("receiverAvatarUrl")),
                 stringValue(row.get("content")),
+                messageType,
                 intValue(row.get("readFlag")) == 1,
                 timeValue(row.get("createdTime"))
         );

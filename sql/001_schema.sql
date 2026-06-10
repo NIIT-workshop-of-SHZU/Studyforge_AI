@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS friend_messages (
     sender_id BIGINT UNSIGNED NOT NULL,
     receiver_id BIGINT UNSIGNED NOT NULL,
     content TEXT NOT NULL,
+    message_type VARCHAR(20) NOT NULL DEFAULT 'TEXT',
     read_flag TINYINT(1) NOT NULL DEFAULT 0,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_friend_messages_pair_time (sender_id, receiver_id, created_time DESC),
@@ -109,6 +110,16 @@ CREATE TABLE IF NOT EXISTS friend_messages (
     CONSTRAINT fk_friend_messages_sender_id FOREIGN KEY (sender_id) REFERENCES users (user_id) ON DELETE CASCADE,
     CONSTRAINT fk_friend_messages_receiver_id FOREIGN KEY (receiver_id) REFERENCES users (user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB COMMENT='Messages between accepted friends';
+
+CREATE TABLE IF NOT EXISTS user_stickers (
+    sticker_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    image_url VARCHAR(512) NOT NULL,
+    sort_no INT NOT NULL DEFAULT 0,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user_stickers_user_sort (user_id, sort_no, sticker_id),
+    CONSTRAINT fk_user_stickers_user_id FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='User saved chat stickers';
 
 CREATE TABLE IF NOT EXISTS user_experience_logs (
     log_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,

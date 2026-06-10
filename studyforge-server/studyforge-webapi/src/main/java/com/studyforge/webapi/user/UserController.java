@@ -13,9 +13,11 @@ import com.studyforge.interaction.learning.model.InterestTag;
 import com.studyforge.interaction.learning.service.FavoriteImportanceService;
 import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.interaction.learning.vo.LearningMemoryVO;
+import com.studyforge.system.dto.AddStickerRequest;
 import com.studyforge.system.dto.FriendMessageRequest;
 import com.studyforge.system.dto.FriendRequestCreateRequest;
 import com.studyforge.system.dto.FriendRequestReviewRequest;
+import com.studyforge.system.dto.ReorderStickersRequest;
 import com.studyforge.system.dto.UpdateProfileRequest;
 import com.studyforge.system.dto.UpdatePasswordRequest;
 import com.studyforge.system.service.AuthService;
@@ -23,6 +25,7 @@ import com.studyforge.system.service.UserProfileService;
 import com.studyforge.system.vo.FriendMessageVO;
 import com.studyforge.system.vo.FriendRequestVO;
 import com.studyforge.system.vo.SocialUserVO;
+import com.studyforge.system.vo.StickerVO;
 import com.studyforge.system.vo.UserActivityVO;
 import com.studyforge.system.vo.UserProfileVO;
 import java.util.List;
@@ -233,6 +236,34 @@ public class UserController {
                                                     @RequestBody FriendMessageRequest request) {
         Long userId = authService.requireUserId(authorization);
         return ApiResponse.success("sent", userProfileService.sendFriendMessage(userId, friendId, request));
+    }
+
+    @GetMapping("/me/stickers")
+    public ApiResponse<List<StickerVO>> stickers(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        Long userId = authService.requireUserId(authorization);
+        return ApiResponse.success(userProfileService.listStickers(userId));
+    }
+
+    @PostMapping("/me/stickers")
+    public ApiResponse<StickerVO> addSticker(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                           @RequestBody AddStickerRequest request) {
+        Long userId = authService.requireUserId(authorization);
+        return ApiResponse.success("saved", userProfileService.addSticker(userId, request));
+    }
+
+    @DeleteMapping("/me/stickers/{stickerId}")
+    public ApiResponse<Void> deleteSticker(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                           @PathVariable("stickerId") Long stickerId) {
+        Long userId = authService.requireUserId(authorization);
+        userProfileService.deleteSticker(userId, stickerId);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @PutMapping("/me/stickers/reorder")
+    public ApiResponse<List<StickerVO>> reorderStickers(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+                                                        @RequestBody ReorderStickersRequest request) {
+        Long userId = authService.requireUserId(authorization);
+        return ApiResponse.success(userProfileService.reorderStickers(userId, request));
     }
 
     private LearningMemoryVO parseGeneratedLearningProfile(Long userId, String generated, String languageCode) {

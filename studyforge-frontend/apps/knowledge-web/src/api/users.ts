@@ -1,5 +1,5 @@
 import { http, unwrap } from '@/api/http';
-import type { FriendMessage, FriendRequest, PostSummary, SocialUser, UserActivity, UserProfile } from '@/types/api';
+import type { FriendMessage, FriendRequest, PostSummary, SocialUser, Sticker, UserActivity, UserProfile } from '@/types/api';
 
 export interface UpdateProfilePayload {
   username: string;
@@ -97,6 +97,26 @@ export function getFriendMessages(friendId: number | string) {
   return unwrap<FriendMessage[]>(http.get(`/users/me/friends/${friendId}/messages`, { params: { limit: 80 } }));
 }
 
-export function sendFriendMessage(friendId: number | string, content: string) {
-  return unwrap<FriendMessage>(http.post(`/users/me/friends/${friendId}/messages`, { content }));
+export function sendFriendMessage(
+  friendId: number | string,
+  content: string,
+  messageType: 'TEXT' | 'IMAGE' | 'STICKER' = 'TEXT'
+) {
+  return unwrap<FriendMessage>(http.post(`/users/me/friends/${friendId}/messages`, { content, messageType }));
+}
+
+export function getMyStickers() {
+  return unwrap<Sticker[]>(http.get('/users/me/stickers'));
+}
+
+export function addSticker(imageUrl: string) {
+  return unwrap<Sticker>(http.post('/users/me/stickers', { imageUrl }));
+}
+
+export function deleteSticker(stickerId: number | string) {
+  return unwrap<void>(http.delete(`/users/me/stickers/${stickerId}`));
+}
+
+export function reorderStickers(stickerIds: number[]) {
+  return unwrap<Sticker[]>(http.put('/users/me/stickers/reorder', { stickerIds }));
 }
