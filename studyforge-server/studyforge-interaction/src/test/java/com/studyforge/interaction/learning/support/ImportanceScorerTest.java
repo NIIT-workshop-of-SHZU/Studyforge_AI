@@ -76,4 +76,36 @@ class ImportanceScorerTest {
         assertThat(preferences.dislikesEnglish()).isTrue();
         assertThat(preferences.prefersChinese()).isTrue();
     }
+
+    @Test
+    void profileDrivenUsesRuleSemanticWhenLlmSemanticIsZero() {
+        List<SemanticTag> dislikeOnlyUserTags = List.of(
+                new SemanticTag("英文文章", 0.9, "dislike"),
+                new SemanticTag("English articles", 0.85, "dislike")
+        );
+
+        ImportanceResult vueChinese = ImportanceScorer.score(
+                "Vue 知识流页面的状态设计：从请求到缓存",
+                "前端状态管理实践",
+                "Vue,状态管理,前端",
+                "zh_CN",
+                MEMORY,
+                true,
+                1L,
+                Set.of(),
+                List.of(),
+                dislikeOnlyUserTags,
+                List.of(),
+                0,
+                false,
+                1,
+                LocalDateTime.now().minusDays(3)
+        );
+
+        assertThat(vueChinese.score()).isGreaterThan(0.25);
+        assertThat(vueChinese.rankReasons()).anyMatch(reason ->
+                reason.contains("MEMORY") || reason.contains("标签匹配") || reason.contains("标题命中")
+        );
+        assertThat(vueChinese.rankReasons()).noneMatch(reason -> reason.equals("综合学习行为评分"));
+    }
 }

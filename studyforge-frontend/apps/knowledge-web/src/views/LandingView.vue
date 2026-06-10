@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, type Component } from 'vue';
+import { computed, onMounted, ref, type Component } from 'vue';
 import { RouterLink } from 'vue-router';
 import {
   ArrowRight,
@@ -69,11 +69,6 @@ async function loadTrendingRows() {
 }
 
 onMounted(loadTrendingRows);
-
-watch(
-  () => preferencesStore.languageCode,
-  () => loadTrendingRows()
-);
 
 const content = computed(() => {
   if (preferencesStore.languageCode === 'en_US') {

@@ -1,21 +1,67 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { ArrowLeft, RefreshCw, UserPlus, UserRound, Users } from '@lucide/vue';
 import { ApiError } from '@/api/http';
 import { followUser, getFollowers, unfollowUser } from '@/api/users';
 import EmptyState from '@/components/EmptyState.vue';
 import LoadingState from '@/components/LoadingState.vue';
+import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 import type { SocialUser } from '@/types/api';
 
 const sessionStore = useSessionStore();
+const preferencesStore = usePreferencesStore();
 const router = useRouter();
 
 const users = ref<SocialUser[]>([]);
 const loading = ref(false);
 const actionLoading = ref<number | null>(null);
 const errorMessage = ref('');
+
+const copy = computed(() => {
+  if (preferencesStore.languageCode === 'en_US') {
+    return {
+      back: 'Back to profile',
+      kicker: 'Followers',
+      title: 'Followers',
+      refresh: 'Refresh',
+      loginTitle: 'Sign in to view followers',
+      loginDesc: 'People who follow you will appear here.',
+      login: 'Log in',
+      loading: 'Loading followers',
+      loadErrorTitle: 'Unable to load',
+      loadErrorFallback: 'Followers list could not be loaded.',
+      sessionExpired: 'Your session expired. Please sign in again to view followers.',
+      unfollowConfirm: (name: string) => `Stop following ${name}?`,
+      followFailed: 'Follow action did not complete successfully.',
+      mutual: 'Mutual',
+      followBack: 'Follow back',
+      emptyTitle: 'No followers yet',
+      emptyDesc: 'When someone follows you, they will appear here.'
+    };
+  }
+
+  return {
+    back: '返回主页',
+    kicker: 'Followers',
+    title: '粉丝',
+    refresh: '刷新',
+    loginTitle: '登录后查看粉丝',
+    loginDesc: '关注你的人会显示在这里。',
+    login: '登录',
+    loading: '正在读取粉丝列表',
+    loadErrorTitle: '暂时无法加载',
+    loadErrorFallback: '粉丝列表暂时打不开',
+    sessionExpired: '登录状态已过期，请重新登录后查看粉丝列表。',
+    unfollowConfirm: (name: string) => `确定不再关注 ${name} 吗？`,
+    followFailed: '关注操作暂时没有成功',
+    mutual: '互相关注',
+    followBack: '回关',
+    emptyTitle: '还没有粉丝',
+    emptyDesc: '当有人关注你时，会显示在这里。'
+  };
+});
 
 async function loadFollowers() {
   if (!sessionStore.isAuthenticated || !sessionStore.userId) {
@@ -31,10 +77,10 @@ async function loadFollowers() {
   } catch (error) {
     if (error instanceof ApiError && error.code === 4010) {
       await sessionStore.logout();
-      errorMessage.value = '登录状态已过期，请重新登录后查看粉丝列表。';
+      errorMessage.value = copy.value.sessionExpired;
       return;
     }
-    errorMessage.value = error instanceof Error ? error.message : '粉丝列表暂时打不开';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.loadErrorFallback;
   } finally {
     loading.value = false;
   }
@@ -48,7 +94,7 @@ async function toggleFollow(user: SocialUser) {
   if (actionLoading.value) {
     return;
   }
-  if (user.followedByViewer && !window.confirm(`确定不再关注 ${user.displayName} 吗？`)) {
+  if (user.followedByViewer && !window.confirm(copy.value.unfollowConfirm(user.displayName))) {
     return;
   }
   actionLoading.value = user.userId;
@@ -60,7 +106,7 @@ async function toggleFollow(user: SocialUser) {
     }
     user.followedByViewer = !user.followedByViewer;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '关注操作暂时没有成功';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.followFailed;
   } finally {
     actionLoading.value = null;
   }
@@ -80,27 +126,27 @@ watch(
       <div>
         <RouterLink class="secondary-button return-link" to="/me">
           <ArrowLeft :size="17" />
-          <span>返回主页</span>
+          <span>{{ copy.back }}</span>
         </RouterLink>
-        <span class="section-kicker">Followers</span>
-        <h1>粉丝</h1>
+        <span class="section-kicker">{{ copy.kicker }}</span>
+        <h1>{{ copy.title }}</h1>
       </div>
       <button class="secondary-button" type="button" :disabled="loading" @click="loadFollowers">
         <RefreshCw :size="17" />
-        <span>刷新</span>
+        <span>{{ copy.refresh }}</span>
       </button>
     </div>
 
     <div v-if="!sessionStore.isAuthenticated" class="login-required">
       <UserRound :size="42" />
-      <h2>登录后查看粉丝</h2>
-      <p>关注你的人会显示在这里。</p>
-      <RouterLink class="primary-button" to="/login">登录</RouterLink>
+      <h2>{{ copy.loginTitle }}</h2>
+      <p>{{ copy.loginDesc }}</p>
+      <RouterLink class="primary-button" to="/login">{{ copy.login }}</RouterLink>
     </div>
 
     <template v-else>
-      <LoadingState v-if="loading" label="正在读取粉丝列表" />
-      <EmptyState v-else-if="errorMessage" title="暂时无法加载" :description="errorMessage" />
+      <LoadingState v-if="loading" :label="copy.loading" />
+      <EmptyState v-else-if="errorMessage" :title="copy.loadErrorTitle" :description="errorMessage" />
 
       <section v-else class="social-grid">
         <article
@@ -127,10 +173,10 @@ watch(
             @click.stop="toggleFollow(user)"
           >
             <component :is="user.followedByViewer ? Users : UserPlus" :size="16" />
-            <span>{{ user.followedByViewer ? '互相关注' : '回关' }}</span>
+            <span>{{ user.followedByViewer ? copy.mutual : copy.followBack }}</span>
           </button>
         </article>
-        <EmptyState v-if="users.length === 0" title="还没有粉丝" description="当有人关注你时，会显示在这里。" />
+        <EmptyState v-if="users.length === 0" :title="copy.emptyTitle" :description="copy.emptyDesc" />
       </section>
     </template>
   </section>

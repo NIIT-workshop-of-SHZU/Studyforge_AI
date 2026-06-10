@@ -7,6 +7,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import KnowledgeCard from '@/components/KnowledgeCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import TopicRail from '@/components/TopicRail.vue';
+import { languageLabel } from '@/i18n/labels';
 import { usePreferencesStore } from '@/stores/preferences';
 import type { PostSummary, TopicCategory } from '@/types/api';
 import { toDate } from '@/utils/date';
@@ -182,12 +183,12 @@ async function loadPosts() {
   }
 }
 
-function languageRank(languageCode: string) {
-  return languageCode === preferencesStore.languageCode ? 0 : 1;
-}
-
 function postTimestamp(post: PostSummary) {
   return toDate(post.createdTime)?.getTime() ?? 0;
+}
+
+function languageRank(languageCode: string) {
+  return languageCode === preferencesStore.languageCode ? 0 : 1;
 }
 
 onMounted(loadPosts);
@@ -243,7 +244,7 @@ watch(keyword, (value) => {
             </span>
             <span>
               <BadgeCheck :size="16" />
-              {{ preferencesStore.languageCode }}
+              {{ languageLabel(preferencesStore.languageCode) }}
             </span>
             <span>
               <Sparkles :size="16" />

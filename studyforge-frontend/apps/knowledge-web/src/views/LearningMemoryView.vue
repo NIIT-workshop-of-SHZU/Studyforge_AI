@@ -30,7 +30,10 @@ const form = reactive({
   manualTags: ''
 });
 
-const autoTags = computed(() => (memory.value?.interestTags ?? []).filter((tag) => tag.source !== 'manual'));
+const autoTags = computed(() =>
+  (memory.value?.interestTags ?? []).filter((tag) => tag.source !== 'manual' && tag.polarity !== 'dislike')
+);
+const dislikeTags = computed(() => (memory.value?.interestTags ?? []).filter((tag) => tag.polarity === 'dislike'));
 const manualTags = computed(() => (memory.value?.interestTags ?? []).filter((tag) => tag.source === 'manual'));
 const copy = computed(() =>
   preferencesStore.languageCode === 'en_US'
@@ -62,6 +65,7 @@ const copy = computed(() =>
         manuallyEdited: 'Manually edited',
         tags: 'Focus Tags',
         autoTags: 'Auto generated',
+        dislikeTags: 'Avoid',
         manualTags: 'Added by you',
         manualPlaceholder: 'Spring, MyBatis, interviews (comma separated)',
         noTags: 'Save more posts and the system will infer tags automatically.',
@@ -105,6 +109,7 @@ const copy = computed(() =>
         manuallyEdited: '已手写编辑',
         tags: '关注标签',
         autoTags: '自动归纳',
+        dislikeTags: '避雷偏好',
         manualTags: '你手动添加',
         manualPlaceholder: 'Spring, MyBatis, 面试（逗号分隔）',
         noTags: '收藏更多文章后，系统会自动归纳标签。',
@@ -234,7 +239,7 @@ async function saveMemory() {
       .filter(Boolean)
       .map((tag) => ({ tag, weight: 0.9, source: 'manual' }));
 
-    await updateLearningMemory(
+    const data = await updateLearningMemory(
       {
         memoryMd: form.memoryMd.trim(),
         aiMemoryEnabled: form.aiMemoryEnabled,
@@ -242,7 +247,6 @@ async function saveMemory() {
       },
       preferencesStore.languageCode
     );
-    const data = await getLearningMemory();
     if (isCurrentMemoryRequest(requestId, userId)) {
       applyMemory(data);
       mode.value = 'read';
@@ -398,6 +402,12 @@ watch(
               <span v-for="tag in autoTags" :key="`auto-${tag.tag}`" class="tag-chip auto">{{ tag.tag }}</span>
             </div>
           </div>
+          <div v-if="dislikeTags.length" class="tag-group">
+            <span class="tag-group-label">{{ copy.dislikeTags }}</span>
+            <div class="tag-list">
+              <span v-for="tag in dislikeTags" :key="`dislike-${tag.tag}`" class="tag-chip dislike">{{ tag.tag }}</span>
+            </div>
+          </div>
           <div v-if="manualTags.length || mode === 'edit'" class="tag-group">
             <span class="tag-group-label">{{ copy.manualTags }}</span>
             <div v-if="mode === 'read' && manualTags.length" class="tag-list">
@@ -411,7 +421,7 @@ watch(
               :placeholder="copy.manualPlaceholder"
             />
           </div>
-          <p v-if="!autoTags.length && !manualTags.length && mode === 'read'" class="tag-empty">{{ copy.noTags }}</p>
+          <p v-if="!autoTags.length && !dislikeTags.length && !manualTags.length && mode === 'read'" class="tag-empty">{{ copy.noTags }}</p>
         </section>
 
         <section class="memory-document surface-card">
@@ -533,6 +543,11 @@ watch(
 .tag-chip.manual {
   background: #ecfdf5;
   color: #0f766e;
+}
+
+.tag-chip.dislike {
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .tag-input {

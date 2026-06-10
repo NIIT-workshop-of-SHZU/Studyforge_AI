@@ -290,6 +290,44 @@ interface PostSummary {
     'ORIGINAL'
 );
 
+INSERT INTO post_i18n (post_id, language_code, title, summary, content, content_format, ai_tags, source_type)
+VALUES (
+    @post_vue_state,
+    'en_US',
+    'State Design for a Vue Knowledge Feed: From Requests to Cache',
+    'Split loading, errors, filters, language, and list state clearly and the feed becomes easier to maintain.',
+    '## Why state comes first
+
+A knowledge feed looks like a simple list, but at runtime it handles many states at once: selected topic, search keyword, loading, errors, pagination, login state, and card statistics. When these states live inside random components, it becomes hard to tell where a bug came from.
+
+I split state into three groups:
+
+- **Request state**: `loading`, `errorMessage`, and the `posts` returned by the API.
+- **View state**: active category, search keyword, sort mode.
+- **User state**: login info, favorites, reading history.
+
+This keeps API failures, filtering, and login changes from tangling together.
+
+## Do not fake list data in the UI
+
+Cards should show titles, summaries, heat scores, and counts from the backend. The frontend can format values, but it should not invent business facts.
+
+## Cache with the right key
+
+Light caching is fine, but cache keys must include filter conditions. After publishing a new post, refresh the feed once so the list stays trustworthy.
+
+## Component boundaries
+
+- `HomeView`: requests, filters, page composition.
+- `TopicRail`: categories and selection events.
+- `KnowledgeCard`: pure presentation for one post.
+
+The hard part of a feed is not visual polish. It is state boundaries.',
+    'MARKDOWN',
+    'Vue,State Management,Knowledge Feed,Axios',
+    'TRANSLATED'
+);
+
 INSERT INTO posts (author_id, category_id, original_language, status, featured, like_count, favorite_count, comment_count, view_count, hot_score)
 SELECT u.user_id, c.category_id, 'en_US', 'PUBLISHED', 1, 15, 9, 2, 388, 94.20
 FROM users u JOIN categories c ON c.category_code = 'TECHNOLOGY'
@@ -356,6 +394,44 @@ The preview should render exactly the same Markdown that will be sent to the ser
     'MARKDOWN',
     'Markdown,Editor,Image Upload,UX',
     'ORIGINAL'
+);
+
+INSERT INTO post_i18n (post_id, language_code, title, summary, content, content_format, ai_tags, source_type)
+VALUES (
+    @post_markdown_composer,
+    'zh_CN',
+    '如何设计一个让用户放心的 Markdown 编辑器',
+    '可靠的编辑器需要保留 Markdown 源文、可视化快捷操作、预览、图片处理和清晰的保存行为。',
+    '## 从写作任务开始
+
+Markdown 编辑器不只是一个大文本框。用户用它把零散笔记整理成别人能读的内容，所以编辑器需要同时支持两种习惯：快速纯文本写作，以及结构化排版。
+
+第一条规则是 **Markdown 必须是源文**。工具栏可以插入标题、链接、图片、代码块、任务列表或表格，但用户始终应该能看到并编辑真正的 Markdown。这样内容可迁移，也不会被锁死在私有格式里。
+
+## 三个关键模式
+
+我通常设计三种模式：
+
+- **写作**：专注的 Markdown 输入区。
+- **分屏**：左侧源文，右侧预览。
+- **预览**：去掉编辑器噪音，只看最终阅读效果。
+
+分屏模式最适合作为默认，因为它能建立 Markdown 与渲染结果之间的对应关系。
+
+## 图片上传要可预期
+
+图片上传失败时，编辑器不应悄悄吞掉错误。应保留原始 Markdown，并给出明确提示，让用户知道哪些图片没有成功插入。
+
+## 本地草稿 vs 云端草稿
+
+本地草稿能防止误触导航导致内容丢失，但它不应伪装成云端草稿。后续的数据库草稿可以再做跨设备恢复、版本历史和定时发布。
+
+## 最后检查
+
+预览区渲染的 Markdown 必须与提交到服务器的正文一致。如果预览和详情页使用不同渲染器，用户很快就会失去信任。',
+    'MARKDOWN',
+    'Markdown,编辑器,图片上传,UX',
+    'TRANSLATED'
 );
 
 INSERT INTO posts (author_id, category_id, original_language, status, featured, like_count, favorite_count, comment_count, view_count, hot_score)
@@ -425,6 +501,47 @@ VALUES (
     'MARKDOWN',
     '复习卡片,学习方法,主动回忆',
     'ORIGINAL'
+);
+
+INSERT INTO post_i18n (post_id, language_code, title, summary, content, content_format, ai_tags, source_type)
+VALUES (
+    @post_review_cards,
+    'en_US',
+    'Four Steps to Turn a Long Article into Review Cards',
+    'Extracting questions, answers, and keywords right after reading works better than rereading the full article days later.',
+    '## Finishing a read is not the same as learning it
+
+Many people save articles but still reread them from scratch when reviewing. The problem is not the article quality. It is that the reading session never produced a reusable artifact. Review cards should not copy the whole article. They should turn it into prompts you can recall from memory.
+
+## Step 1: state the problem the article solves
+
+Answer in one sentence: what problem does this article solve?
+
+## Step 2: write three recall questions
+
+Each question should force you to explain a concept in your own words instead of recognizing a phrase from the text.
+
+## Step 3: capture keywords and anchors
+
+Keywords help you rebuild the idea quickly. Anchors tell you where to return in the original article if your recall is incomplete.
+
+## Step 4: review on a schedule
+
+Review cards only work if you revisit them. A short daily pass beats one long reread at the end of the month.
+
+## Template
+
+```md
+- Question:
+- Short answer:
+- Keywords:
+- Anchor in the source:
+```
+
+The value of a long article is not in your favorites folder. It is in whether you can restate it without looking.',
+    'MARKDOWN',
+    'Review Cards,Learning Methods,Active Recall',
+    'TRANSLATED'
 );
 
 INSERT INTO posts (author_id, category_id, original_language, status, featured, like_count, favorite_count, comment_count, view_count, hot_score)
@@ -601,6 +718,56 @@ A study log is not a diary. It is a feedback system. The goal is to make the nex
     'MARKDOWN',
     'Career,Interview,Study Log',
     'ORIGINAL'
+);
+
+INSERT INTO post_i18n (post_id, language_code, title, summary, content, content_format, ai_tags, source_type)
+VALUES (
+    @post_interview_log,
+    'zh_CN',
+    '我如何准备技术面试学习日志',
+    '一份有用的面试日志会记录结论、错误、来源链接，以及下一道要练习的题。',
+    '## 为什么需要学习日志
+
+技术面试准备很容易变成一堆链接。我以前会收藏算法笔记、后端文章和系统设计图，却没有记录自己真正学到了什么。学习日志解决这个问题，因为每次练习结束都会留下一个清晰产物。
+
+## 我使用的结构
+
+每条记录包含五个部分：
+
+```md
+## 主题
+
+## 我理解了什么
+
+## 我犯过的错误
+
+## 来源链接
+
+## 下一道练习题
+```
+
+结构故意保持简单。如果模板太长，我在高强度练习后就不愿意写。
+
+## 直接记录错误
+
+最有价值的部分是错误记录。错误可能是：
+
+- 看懂了题意，但边界条件处理错了。
+- 知道思路，但实现细节卡住。
+- 能写出代码，但说不清时间复杂度。
+
+把这些错误写下来，下一周复习时就不会重复踩坑。
+
+## 每周复盘
+
+每周五我会扫一遍日志，标记重复出现的模式。如果同一个错误出现三次，它就成了下周的重点。这样准备过程不会显得随机。
+
+## 最后
+
+学习日志不是日记，而是反馈系统。目标是让下一次练习比上一次更精准。',
+    'MARKDOWN',
+    '职业,面试,学习日志',
+    'TRANSLATED'
 );
 
 INSERT INTO posts (author_id, category_id, original_language, status, featured, like_count, favorite_count, comment_count, view_count, hot_score)

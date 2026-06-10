@@ -64,9 +64,16 @@ public final class ImportanceScorer {
                                          boolean aiEngaged,
                                          int collectionCount,
                                          LocalDateTime savedAt) {
-        SemanticTagMatcher.MatchResult semanticMatch = SemanticTagMatcher.match(userSemanticTags, postSemanticTags);
-        boolean hasSemantic = userSemanticTags != null && !userSemanticTags.isEmpty()
-                && postSemanticTags != null && !postSemanticTags.isEmpty();
+        List<SemanticTag> effectivePostTags = SemanticPostTagEnricher.enrich(
+                postSemanticTags,
+                title,
+                summary,
+                aiTags
+        );
+        SemanticTagMatcher.MatchResult semanticMatch = SemanticTagMatcher.match(userSemanticTags, effectivePostTags);
+        boolean hasUserSemantic = userSemanticTags != null && !userSemanticTags.isEmpty();
+        boolean hasSemantic = hasUserSemantic && !effectivePostTags.isEmpty();
+        boolean profileDriven = memoryPrioritized && hasUserSemantic;
 
         Set<String> postTags = LearningTextTagger.extractPostTags(title, summary, aiTags);
         List<InterestTag> profileTags = LearningTextTagger.buildUserInterestTags(memoryMd, interestTags);
@@ -75,8 +82,15 @@ public final class ImportanceScorer {
         double tagMatch = tagMatchScore(postTags, scoringTags);
         double memoryMatch = memoryKeywordScore(title, summary, memoryMd);
         double directMemory = directMemoryInterestScore(title, summary, memoryMd);
-        double ruleSemantic = Math.max(Math.max(tagMatch, memoryMatch * 0.95), directMemory);
-        double semantic = hasSemantic ? semanticMatch.score() : ruleSemantic;
+        double titleUserMatch = titleMatchesUserLikeTags(title, summary, userSemanticTags);
+        double ruleSemantic = Math.max(
+                Math.max(Math.max(tagMatch, memoryMatch * 0.95), directMemory),
+                titleUserMatch
+        );
+        double llmSemantic = semanticMatch.score();
+        double semantic = profileDriven
+                ? Math.max(llmSemantic, ruleSemantic)
+                : (hasSemantic ? Math.max(llmSemantic, ruleSemantic * 0.9) : ruleSemantic);
 
         LearningMemoryPreferences preferences = LearningMemoryPreferences.parse(memoryMd);
         double languageFit = hasSemantic
@@ -84,22 +98,34 @@ public final class ImportanceScorer {
                 : languageFitScore(originalLanguage, preferences);
         double behavior = behaviorScore(viewCount, aiEngaged, collectionCount);
         double category = categoryMatchScore(categoryId, topCategoryIds);
-        double recency = recencyBoost(savedAt);
+        double recency = profileDriven ? 0.0 : recencyBoost(savedAt);
 
-        double behaviorAdjusted = behavior * (0.2 + 0.8 * semantic);
-        double total = hasSemantic
-                ? 0.78 * semantic + 0.12 * languageFit + 0.07 * behaviorAdjusted + 0.03 * recency
-                : 0.48 * semantic + 0.27 * languageFit + 0.15 * behaviorAdjusted + 0.07 * category + 0.03 * recency;
+        double behaviorAdjusted = behavior * (profileDriven ? 0.15 : (0.2 + 0.8 * semantic));
+        double total;
+        if (profileDriven) {
+            total = 0.92 * semantic + 0.06 * languageFit + 0.02 * behaviorAdjusted;
+        } else if (hasSemantic) {
+            total = 0.86 * semantic + 0.10 * languageFit + 0.04 * behaviorAdjusted;
+        } else {
+            total = 0.48 * semantic + 0.27 * languageFit + 0.15 * behaviorAdjusted + 0.07 * category + 0.03 * recency;
+        }
         total = Math.max(0.0, Math.min(1.0, total));
 
         List<String> reasons = new ArrayList<>();
-        if (hasSemantic && semanticMatch.score() >= 0.25) {
-            reasons.addAll(semanticMatch.reasons());
-        } else if (tagMatch >= 0.35 || directMemory >= 0.45) {
-            reasons.add("标签匹配: " + matchedTagsLabel(postTags, scoringTags));
+        reasons.addAll(semanticMatch.reasons());
+        appendPartialSemanticReasons(reasons, semanticMatch);
+        if (titleUserMatch >= 0.35) {
+            reasons.add("标题命中 MEMORY 关注点: " + matchedLikeTagsInTitle(title, summary, userSemanticTags)
+                    + "（" + percent(titleUserMatch) + "）");
+        } else if (tagMatch >= 0.25 || directMemory >= 0.35) {
+            reasons.add("规则标签匹配: " + matchedTagsLabel(postTags, scoringTags)
+                    + "（" + percent(Math.max(tagMatch, directMemory)) + "）");
         }
-        if (!hasSemantic && memoryMatch >= 0.35) {
-            reasons.add("符合 MEMORY.md 关注点");
+        if (memoryMatch >= 0.25 && reasons.stream().noneMatch(reason -> reason.contains("MEMORY"))) {
+            reasons.add("MEMORY.md 关键词命中（" + percent(memoryMatch) + "）");
+        }
+        if (profileDriven && !reasons.isEmpty()) {
+            reasons.add(0, "综合语义相关度 " + percent(semantic));
         }
         if (languageFit >= 0.85 && (preferences.hasLanguagePreference() || hasLanguageDislike(userSemanticTags))) {
             reasons.add("符合你的中文阅读偏好");
@@ -107,26 +133,88 @@ public final class ImportanceScorer {
         if (languageFit <= 0.15 && (preferences.dislikesEnglish() || hasLanguageDislike(userSemanticTags))) {
             reasons.add("英文文章已按偏好降权");
         }
-        if (aiEngaged && semantic >= 0.25) {
+        if (!profileDriven && aiEngaged && semantic >= 0.25) {
             reasons.add("你生成过 AI 学习内容");
         }
-        if (viewCount >= 2 && semantic >= 0.20) {
+        if (!profileDriven && viewCount >= 2 && semantic >= 0.20) {
             reasons.add("你多次打开过");
         }
-        if (collectionCount > 1) {
+        if (!profileDriven && collectionCount > 1) {
             reasons.add("保存在多个收藏夹");
         }
-        if (!hasSemantic && category >= 0.8) {
+        if (!profileDriven && !hasSemantic && category >= 0.8) {
             reasons.add("符合你常看的主题分类");
         }
-        if (recency >= 0.7) {
+        if (!profileDriven && recency >= 0.7) {
             reasons.add("最近收藏");
         }
         if (reasons.isEmpty() && total > 0) {
-            reasons.add("综合学习行为评分");
+            if (profileDriven) {
+                reasons.addAll(lowMatchReasons(semanticMatch, scoringTags, postTags, effectivePostTags, percent(semantic)));
+            } else {
+                reasons.add("综合学习行为评分（语义 " + percent(semantic) + "）");
+            }
         }
 
-        return new ImportanceResult(total, reasons);
+        return new ImportanceResult(total, dedupeReasons(reasons));
+    }
+
+    private static int percent(double value) {
+        return (int) Math.round(Math.max(0.0, Math.min(1.0, value)) * 100);
+    }
+
+    private static void appendPartialSemanticReasons(List<String> reasons, SemanticTagMatcher.MatchResult semanticMatch) {
+        if (!reasons.isEmpty() || semanticMatch.matches().isEmpty()) {
+            return;
+        }
+        SemanticTagMatcher.TagMatch best = semanticMatch.matches().stream()
+                .filter(match -> !match.dislike())
+                .findFirst()
+                .orElse(semanticMatch.matches().get(0));
+        reasons.add(SemanticTagMatcher.formatMatchReason(
+                best.userTag(),
+                best.postTag(),
+                best.similarity(),
+                best.dislike()
+        ) + "（未达筛选阈值）");
+    }
+
+    private static List<String> lowMatchReasons(SemanticTagMatcher.MatchResult semanticMatch,
+                                                List<InterestTag> scoringTags,
+                                                Set<String> postTags,
+                                                List<SemanticTag> effectivePostTags,
+                                                int semanticPercent) {
+        List<String> reasons = new ArrayList<>();
+        reasons.add("与 MEMORY.md 相关度 " + semanticPercent + "%，暂无强匹配");
+        if (!semanticMatch.matches().isEmpty()) {
+            SemanticTagMatcher.TagMatch best = semanticMatch.matches().get(0);
+            reasons.add("最接近: " + SemanticTagMatcher.formatMatchReason(
+                    best.userTag(),
+                    best.postTag(),
+                    best.similarity(),
+                    best.dislike()
+            ));
+        }
+        if (!scoringTags.isEmpty()) {
+            reasons.add("你的关注: " + scoringTags.stream().map(InterestTag::tag).limit(4).reduce((a, b) -> a + "、" + b).orElse("无"));
+        }
+        if (!effectivePostTags.isEmpty()) {
+            reasons.add("文章标签: " + effectivePostTags.stream().map(SemanticTag::tag).limit(4).reduce((a, b) -> a + "、" + b).orElse("无"));
+        } else if (!postTags.isEmpty()) {
+            reasons.add("文章标签: " + postTags.stream().limit(4).reduce((a, b) -> a + "、" + b).orElse("无"));
+        }
+        return reasons;
+    }
+
+    private static List<String> dedupeReasons(List<String> reasons) {
+        List<String> deduped = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (String reason : reasons) {
+            if (reason != null && !reason.isBlank() && seen.add(reason) && deduped.size() < 8) {
+                deduped.add(reason);
+            }
+        }
+        return deduped;
     }
 
     private static boolean hasLanguageDislike(List<SemanticTag> userSemanticTags) {
@@ -196,11 +284,20 @@ public final class ImportanceScorer {
     private static List<InterestTag> selectScoringTags(List<InterestTag> profileTags,
                                                        String memoryMd,
                                                        boolean memoryPrioritized) {
+        List<InterestTag> likeTags = profileTags == null
+                ? List.of()
+                : profileTags.stream().filter(tag -> !tag.isDislike()).toList();
         if (!memoryPrioritized || memoryMd == null || memoryMd.isBlank()) {
-            return profileTags;
+            return likeTags;
         }
-        List<InterestTag> prioritized = profileTags.stream()
-                .filter(tag -> "memory".equalsIgnoreCase(tag.source()) || "manual".equalsIgnoreCase(tag.source()))
+        List<InterestTag> prioritized = likeTags.stream()
+                .filter(tag -> {
+                    String source = tag.source() == null ? "" : tag.source().toLowerCase(Locale.ROOT);
+                    return source.equals("memory")
+                            || source.equals("manual")
+                            || source.equals("semantic")
+                            || source.equals("auto");
+                })
                 .toList();
         if (!prioritized.isEmpty()) {
             return prioritized;
@@ -370,5 +467,61 @@ public final class ImportanceScorer {
             return 0.0;
         }
         return Math.max(0.0, 1.0 - (days / 90.0));
+    }
+
+    private static double titleMatchesUserLikeTags(String title,
+                                                   String summary,
+                                                   List<SemanticTag> userSemanticTags) {
+        if (userSemanticTags == null || userSemanticTags.isEmpty()) {
+            return 0.0;
+        }
+        String haystack = ((title == null ? "" : title) + " " + (summary == null ? "" : summary))
+                .toLowerCase(Locale.ROOT);
+        if (haystack.isBlank()) {
+            return 0.0;
+        }
+        double matchedWeight = 0.0;
+        double totalWeight = 0.0;
+        for (SemanticTag userTag : userSemanticTags) {
+            if (userTag.isDislike()) {
+                continue;
+            }
+            totalWeight += userTag.weight();
+            String normalized = LearningTextTagger.canonicalize(userTag.tag()).toLowerCase(Locale.ROOT);
+            if (normalized.isBlank()) {
+                continue;
+            }
+            if (haystack.contains(normalized) || haystack.contains(userTag.tag().toLowerCase(Locale.ROOT))) {
+                matchedWeight += userTag.weight();
+            }
+        }
+        if (totalWeight <= 0) {
+            return 0.0;
+        }
+        return matchedWeight / totalWeight;
+    }
+
+    private static String matchedLikeTagsInTitle(String title,
+                                                 String summary,
+                                                 List<SemanticTag> userSemanticTags) {
+        if (userSemanticTags == null || userSemanticTags.isEmpty()) {
+            return "相关主题";
+        }
+        String haystack = ((title == null ? "" : title) + " " + (summary == null ? "" : summary))
+                .toLowerCase(Locale.ROOT);
+        List<String> matched = new ArrayList<>();
+        for (SemanticTag userTag : userSemanticTags) {
+            if (userTag.isDislike()) {
+                continue;
+            }
+            String normalized = LearningTextTagger.canonicalize(userTag.tag()).toLowerCase(Locale.ROOT);
+            if (haystack.contains(normalized) || haystack.contains(userTag.tag().toLowerCase(Locale.ROOT))) {
+                matched.add(userTag.tag());
+            }
+            if (matched.size() >= 3) {
+                break;
+            }
+        }
+        return matched.isEmpty() ? "相关主题" : String.join(", ", matched);
     }
 }

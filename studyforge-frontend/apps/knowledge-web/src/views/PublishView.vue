@@ -29,6 +29,8 @@ import { uploadImage } from '@/api/uploads';
 import LoadingState from '@/components/LoadingState.vue';
 import MentionTextarea from '@/components/MentionTextarea.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
+import { topicCategories } from '@/i18n/categories';
+import { languageLabel } from '@/i18n/labels';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 
@@ -71,47 +73,271 @@ const form = reactive({
   originalLanguage: preferencesStore.languageCode
 });
 
-const categories = computed(() => [
-  { id: 1, label: preferencesStore.languageCode === 'en_US' ? 'Technology' : '技术实践' },
-  { id: 2, label: preferencesStore.languageCode === 'en_US' ? 'Business' : '商业观察' },
-  { id: 3, label: preferencesStore.languageCode === 'en_US' ? 'Productivity' : '效率方法' },
-  { id: 4, label: preferencesStore.languageCode === 'en_US' ? 'Career' : '职业成长' },
-  { id: 5, label: preferencesStore.languageCode === 'en_US' ? 'Finance' : '财务入门' }
-]);
+const categories = computed(() =>
+  topicCategories(preferencesStore.languageCode, false).map((category, index) => ({
+    id: index + 1,
+    label: category.name
+  }))
+);
 
-const templates = [
-  {
-    name: '方法笔记',
-    description: '适合整理步骤、经验和复盘',
-    content:
-      '## 我遇到的问题\n\n\n## 我尝试的方法\n\n1. \n2. \n3. \n\n## 最有用的结论\n\n> \n\n## 下次可以直接复用的清单\n\n- [ ] \n- [ ] \n'
-  },
-  {
-    name: '技术文章',
-    description: '适合写代码、架构和工具实践',
-    content:
-      '## 背景\n\n\n## 方案\n\n\n```java\n// 在这里放关键代码\n```\n\n## 为什么这样做\n\n\n## 注意点\n\n- \n'
-  },
-  {
-    name: '阅读卡片',
-    description: '适合沉淀书籍、课程、论文',
-    content:
-      '## 这篇内容讲了什么\n\n\n## 三个要点\n\n- \n- \n- \n\n## 我想继续追问\n\n1. \n2. \n\n## 复习提示\n\n'
-  }
-];
+const copy = computed(() =>
+  preferencesStore.languageCode === 'en_US'
+    ? {
+        kicker: 'Markdown Post',
+        pageTitleNew: 'Write a post worth revisiting',
+        pageTitleEdit: 'Edit this post',
+        pageDescNew:
+          'Write in Markdown and use the toolbar for headings, links, images, code blocks, and tables. The preview shows how the post will look when published.',
+        pageDescEdit:
+          'Update the body, summary, cover, and topic. Views, saves, and discussion history stay intact.',
+        loadingPost: 'Loading post',
+        title: 'Title',
+        titlePlaceholder: 'e.g. How to structure a Markdown study note',
+        summary: 'Summary',
+        summaryPlaceholder: 'In one or two sentences, explain what problem this post helps readers solve',
+        removeCover: 'Remove cover',
+        replaceCover: 'Replace cover',
+        uploadCover: 'Upload cover',
+        coverDropHint: 'Click to choose, or drag JPG, PNG, WebP, or GIF here',
+        generatingCover: 'Generating',
+        aiCover: 'AI cover',
+        aiCoverHint: 'Generate a blog-style cover from the title, summary, and body',
+        formatting: 'Formatting',
+        aiFormat: 'AI format',
+        toolbarLabel: 'Markdown toolbar',
+        aiFormatTitle: 'AI format',
+        headingTitle: 'Heading',
+        boldTitle: 'Bold',
+        quoteTitle: 'Quote',
+        linkTitle: 'Link',
+        codeTitle: 'Code block',
+        taskListTitle: 'Task list',
+        orderedListTitle: 'Ordered list',
+        tableTitle: 'Table',
+        imageLinkTitle: 'Image link',
+        uploadImageTitle: 'Upload image',
+        modeWrite: 'Write',
+        modeSplit: 'Split',
+        modePreview: 'Preview',
+        bodyLabel: 'Body (Markdown)',
+        bodyPlaceholder: 'Write Markdown directly, or insert formatting from the toolbar above.',
+        previewHead: 'Publish preview',
+        previewStats: (count: number, minutes: number) => `${count} chars · ~${minutes} min read`,
+        untitled: 'Untitled post',
+        previewEmpty: 'Start writing the body here.',
+        saveDraft: 'Save draft',
+        publishing: 'Publishing',
+        saving: 'Saving',
+        uploading: 'Uploading',
+        generatingCoverAction: 'Generating cover',
+        formattingAction: 'Formatting',
+        saveChanges: 'Save changes',
+        publish: 'Publish to feed',
+        publishSettings: 'Publish settings',
+        topic: 'Topic',
+        contentLanguage: 'Content language',
+        presets: 'Article presets',
+        languageRules: 'Language rules',
+        languageRulesText:
+          'Posts are shown in the language you write in. When you switch the site language, readers see the original text if no translation exists.',
+        draftSaved: 'Draft saved',
+        text: 'text',
+        emphasis: 'emphasis',
+        heading: 'Heading',
+        quote: 'Quote text',
+        linkText: 'Link text',
+        linkTextPrompt: 'Link text',
+        linkUrlPrompt: 'URL',
+        imageUrlPrompt: 'Image URL',
+        imageAltPrompt: 'Alt text',
+        image: 'Image',
+        imageTooLarge: 'Images must be 8MB or smaller',
+        imageTypeInvalid: 'Only JPG, PNG, WebP, and GIF images are supported',
+        loginToUpload: 'Please sign in before uploading images',
+        uploadFailed: 'Image upload failed',
+        loginToFormat: 'Please sign in before using AI formatting',
+        writeBeforeFormat: 'Write some body text before using AI formatting',
+        formatTooLong: 'AI formatting supports up to 12,000 characters at a time',
+        formatFailed: 'AI formatting did not complete',
+        loginToCover: 'Please sign in before generating a cover',
+        writeBeforeCover: 'Add a title, summary, or body before generating a cover',
+        coverTooLong: 'Cover generation supports up to 12,000 characters of reference text',
+        coverGenerated: 'Cover generated',
+        coverGeneratedWith: (brief: string) => `Cover generated: ${brief}`,
+        coverFailed: 'Cover generation did not complete',
+        editForbidden: 'Only the author can edit this post.',
+        loadFailed: 'This post could not be loaded for editing',
+        saveFailed: 'Save failed. Please try again.',
+        publishFailed: 'Publish failed. Please try again.',
+        templates: [
+          {
+            name: 'Method notes',
+            description: 'Steps, experiments, and retrospectives',
+            content:
+              '## Problem I ran into\n\n\n## What I tried\n\n1. \n2. \n3. \n\n## Most useful takeaway\n\n> \n\n## Reusable checklist\n\n- [ ] \n- [ ] \n'
+          },
+          {
+            name: 'Technical article',
+            description: 'Code, architecture, and tool practice',
+            content:
+              '## Background\n\n\n## Approach\n\n\n```java\n// key code here\n```\n\n## Why this works\n\n\n## Caveats\n\n- \n'
+          },
+          {
+            name: 'Reading card',
+            description: 'Books, courses, and papers',
+            content:
+              '## What this covered\n\n\n## Three takeaways\n\n- \n- \n- \n\n## Questions to explore\n\n1. \n2. \n\n## Review prompts\n\n'
+          }
+        ],
+        taskTodo: 'Todo',
+        taskNext: 'Next step',
+        step1: 'Step 1',
+        step2: 'Step 2',
+        step3: 'Step 3',
+        tableProject: 'Item',
+        tableDesc: 'Notes'
+      }
+    : {
+        kicker: 'Markdown 帖子',
+        pageTitleNew: '写一篇可以沉淀的学习帖子',
+        pageTitleEdit: '编辑这篇帖子',
+        pageDescNew:
+          '用 Markdown 写正文，也可以通过工具栏插入标题、链接、图片、代码块和表格。右侧预览就是发布后的文章效果。',
+        pageDescEdit: '修改正文、摘要、封面和主题后保存，文章会继续保留原有的阅读、收藏和讨论记录。',
+        loadingPost: '正在读取帖子内容',
+        title: '标题',
+        titlePlaceholder: '例如：一次把 Markdown 学习笔记写清楚',
+        summary: '摘要',
+        summaryPlaceholder: '用一两句话说明这篇内容能帮读者解决什么问题',
+        removeCover: '移除封面',
+        replaceCover: '更换封面',
+        uploadCover: '上传封面',
+        coverDropHint: '点击选择，或把 JPG、PNG、WebP、GIF 拖到这里',
+        generatingCover: '生成中',
+        aiCover: 'AI 生成封面',
+        aiCoverHint: '根据标题、摘要和正文生成博客风格封面',
+        formatting: '排版中',
+        aiFormat: 'AI 排版',
+        toolbarLabel: 'Markdown 工具栏',
+        aiFormatTitle: 'AI 排版',
+        headingTitle: '二级标题',
+        boldTitle: '加粗',
+        quoteTitle: '引用',
+        linkTitle: '链接',
+        codeTitle: '代码块',
+        taskListTitle: '任务列表',
+        orderedListTitle: '有序列表',
+        tableTitle: '表格',
+        imageLinkTitle: '图片链接',
+        uploadImageTitle: '上传并插入图片',
+        modeWrite: '编辑',
+        modeSplit: '分屏',
+        modePreview: '预览',
+        bodyLabel: '正文 Markdown',
+        bodyPlaceholder: '可以直接写 Markdown，也可以用上方工具栏插入格式。',
+        previewHead: '发布预览',
+        previewStats: (count: number, minutes: number) => `${count} 字 · 约 ${minutes} 分钟读完`,
+        untitled: '未命名帖子',
+        previewEmpty: '从这里开始写正文。',
+        saveDraft: '保存草稿',
+        publishing: '正在发布',
+        saving: '正在保存',
+        uploading: '正在上传',
+        generatingCoverAction: '正在生成封面',
+        formattingAction: '正在排版',
+        saveChanges: '保存修改',
+        publish: '发布到知识流',
+        publishSettings: '发布设置',
+        topic: '主题',
+        contentLanguage: '内容语言',
+        presets: '文章预设',
+        languageRules: '语言规则',
+        languageRulesText: '帖子展示以你写作的语言为准。切换站点语言时，如果没有对应版本，会展示原文，不会自动翻译你的内容。',
+        draftSaved: '草稿已保存',
+        text: '文本',
+        emphasis: '重点',
+        heading: '标题',
+        quote: '引用内容',
+        linkText: '链接文本',
+        linkTextPrompt: '链接文字',
+        linkUrlPrompt: '链接地址',
+        imageUrlPrompt: '图片地址',
+        imageAltPrompt: '图片说明',
+        image: '图片',
+        imageTooLarge: '图片不能超过 8MB',
+        imageTypeInvalid: '只支持 JPG、PNG、WebP 和 GIF 图片',
+        loginToUpload: '请先登录再上传图片',
+        uploadFailed: '图片暂时上传不了',
+        loginToFormat: '请先登录再使用 AI 排版',
+        writeBeforeFormat: '先写入一段正文，再使用 AI 排版',
+        formatTooLong: 'AI 排版一次最多处理 12000 个字符',
+        formatFailed: 'AI 排版暂时没有成功',
+        loginToCover: '请先登录再生成封面',
+        writeBeforeCover: '先写标题、摘要或正文，再生成封面',
+        coverTooLong: '生成封面一次最多参考 12000 个字符',
+        coverGenerated: '封面已生成',
+        coverGeneratedWith: (brief: string) => `封面已生成：${brief}`,
+        coverFailed: 'AI 封面暂时没有生成成功',
+        editForbidden: '只有作者本人可以编辑这篇帖子。',
+        loadFailed: '这篇帖子暂时无法编辑',
+        saveFailed: '暂时保存不了，请稍后再试',
+        publishFailed: '暂时发布不了，请稍后再试',
+        templates: [
+          {
+            name: '方法笔记',
+            description: '适合整理步骤、经验和复盘',
+            content:
+              '## 我遇到的问题\n\n\n## 我尝试的方法\n\n1. \n2. \n3. \n\n## 最有用的结论\n\n> \n\n## 下次可以直接复用的清单\n\n- [ ] \n- [ ] \n'
+          },
+          {
+            name: '技术文章',
+            description: '适合写代码、架构和工具实践',
+            content:
+              '## 背景\n\n\n## 方案\n\n\n```java\n// 在这里放关键代码\n```\n\n## 为什么这样做\n\n\n## 注意点\n\n- \n'
+          },
+          {
+            name: '阅读卡片',
+            description: '适合沉淀书籍、课程、论文',
+            content:
+              '## 这篇内容讲了什么\n\n\n## 三个要点\n\n- \n- \n- \n\n## 我想继续追问\n\n1. \n2. \n\n## 复习提示\n\n'
+          }
+        ],
+        taskTodo: '待完成',
+        taskNext: '下一步',
+        step1: '第一步',
+        step2: '第二步',
+        step3: '第三步',
+        tableProject: '项目',
+        tableDesc: '说明'
+      }
+);
+
+const templates = computed(() => copy.value.templates);
 
 const wordCount = computed(() => form.content.replace(/\s+/g, '').length);
 const readingMinutes = computed(() => Math.max(1, Math.ceil(wordCount.value / 450)));
+const previewStats = computed(() => copy.value.previewStats(wordCount.value, readingMinutes.value));
 const hasDraft = computed(() => Boolean(form.title || form.summary || form.content || form.coverImageUrl));
 const isEditMode = computed(() => route.name === 'post-edit');
 const editPostId = computed(() => (typeof route.params.postId === 'string' ? route.params.postId : ''));
 const currentDraftKey = computed(() => (isEditMode.value && editPostId.value ? `${DRAFT_KEY}.${editPostId.value}` : DRAFT_KEY));
-const pageTitle = computed(() => (isEditMode.value ? '编辑这篇帖子' : '写一篇可以沉淀的学习帖子'));
-const pageDescription = computed(() =>
-  isEditMode.value
-    ? '修改正文、摘要、封面和主题后保存，文章会继续保留原有的阅读、收藏和讨论记录。'
-    : '用 Markdown 写正文，也可以通过工具栏插入标题、链接、图片、代码块和表格。右侧预览就是发布后的文章效果。'
-);
+const pageTitle = computed(() => (isEditMode.value ? copy.value.pageTitleEdit : copy.value.pageTitleNew));
+const pageDescription = computed(() => (isEditMode.value ? copy.value.pageDescEdit : copy.value.pageDescNew));
+const submitLabel = computed(() => {
+  if (loading.value) {
+    return isEditMode.value ? copy.value.saving : copy.value.publishing;
+  }
+  if (uploading.value) {
+    return copy.value.uploading;
+  }
+  if (generatingCover.value) {
+    return copy.value.generatingCoverAction;
+  }
+  if (formatting.value) {
+    return copy.value.formattingAction;
+  }
+  return isEditMode.value ? copy.value.saveChanges : copy.value.publish;
+});
 
 function categoryIdFromCode(categoryCode: string) {
   const map: Record<string, number> = {
@@ -126,7 +352,7 @@ function categoryIdFromCode(categoryCode: string) {
 
 function saveDraft() {
   localStorage.setItem(currentDraftKey.value, JSON.stringify(form));
-  savedMessage.value = '草稿已保存';
+  savedMessage.value = copy.value.draftSaved;
   window.setTimeout(() => {
     savedMessage.value = '';
   }, 1400);
@@ -171,7 +397,7 @@ async function loadEditablePost() {
   try {
     const detail = await getPostDetail(editPostId.value, preferencesStore.languageCode);
     if (detail.authorId !== sessionStore.userId) {
-      errorMessage.value = '只有作者本人可以编辑这篇帖子。';
+      errorMessage.value = copy.value.editForbidden;
       return;
     }
     form.title = detail.title;
@@ -182,7 +408,7 @@ async function loadEditablePost() {
     form.originalLanguage = detail.languageCode;
     loadDraft();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '这篇帖子暂时无法编辑';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.loadFailed;
   } finally {
     restoring.value = false;
     loadingPost.value = false;
@@ -207,7 +433,7 @@ async function loadInitialState() {
   restoring.value = false;
 }
 
-function insertMarkdown(before: string, after = '', placeholder = '文本') {
+function insertMarkdown(before: string, after = '', placeholder = copy.value.text) {
   const textarea = editorRef.value;
   const start = textarea?.selectionStart ?? form.content.length;
   const end = textarea?.selectionEnd ?? form.content.length;
@@ -241,36 +467,36 @@ function insertCodeBlock() {
 }
 
 function insertTaskList() {
-  insertBlock('- [ ] 待完成\n- [ ] 下一步');
+  insertBlock(`- [ ] ${copy.value.taskTodo}\n- [ ] ${copy.value.taskNext}`);
 }
 
 function insertOrderedList() {
-  insertBlock('1. 第一步\n2. 第二步\n3. 第三步');
+  insertBlock(`1. ${copy.value.step1}\n2. ${copy.value.step2}\n3. ${copy.value.step3}`);
 }
 
 function insertTable() {
-  insertBlock('| 项目 | 说明 |\n| --- | --- |\n|  |  |');
+  insertBlock(`| ${copy.value.tableProject} | ${copy.value.tableDesc} |\n| --- | --- |\n|  |  |`);
 }
 
 function insertLink() {
-  const text = window.prompt('链接文字', selectedText() || '链接文本');
+  const text = window.prompt(copy.value.linkTextPrompt, selectedText() || copy.value.linkText);
   if (text === null) {
     return;
   }
-  const url = window.prompt('链接地址', 'https://');
+  const url = window.prompt(copy.value.linkUrlPrompt, 'https://');
   if (!url) {
     return;
   }
-  insertMarkdown('[', `](${url.trim()})`, text.trim() || '链接文本');
+  insertMarkdown('[', `](${url.trim()})`, text.trim() || copy.value.linkText);
 }
 
 function insertImageByUrl() {
-  const url = window.prompt('图片地址', 'https://');
+  const url = window.prompt(copy.value.imageUrlPrompt, 'https://');
   if (!url) {
     return;
   }
-  const alt = window.prompt('图片说明', '图片') || '图片';
-  insertBlock(`![${alt.trim() || '图片'}](${url.trim()})`);
+  const alt = window.prompt(copy.value.imageAltPrompt, copy.value.image) || copy.value.image;
+  insertBlock(`![${alt.trim() || copy.value.image}](${url.trim()})`);
 }
 
 function applyTemplate(content: string) {
@@ -329,7 +555,7 @@ function handleEditorKeydown(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
   if (key === 'b') {
     event.preventDefault();
-    insertMarkdown('**', '**', '重点');
+    insertMarkdown('**', '**', copy.value.emphasis);
   }
   if (key === 'k') {
     event.preventDefault();
@@ -346,17 +572,17 @@ function firstImage(files?: FileList | null) {
 
 function imageValidationMessage(file: File) {
   if (file.size > MAX_IMAGE_SIZE) {
-    return '图片不能超过 8MB';
+    return copy.value.imageTooLarge;
   }
   if (file.type && !ALLOWED_IMAGE_TYPES.has(file.type)) {
-    return '只支持 JPG、PNG、WebP 和 GIF 图片';
+    return copy.value.imageTypeInvalid;
   }
   return '';
 }
 
 async function uploadAndUse(file: File, target: 'cover' | 'inline') {
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再上传图片';
+    errorMessage.value = copy.value.loginToUpload;
     return;
   }
 
@@ -378,7 +604,7 @@ async function uploadAndUse(file: File, target: 'cover' | 'inline') {
     }
     saveDraft();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '图片暂时上传不了';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.uploadFailed;
   } finally {
     uploading.value = false;
   }
@@ -391,17 +617,17 @@ function removeCover() {
 
 async function formatWithAi() {
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再使用 AI 排版';
+    errorMessage.value = copy.value.loginToFormat;
     return;
   }
 
   const source = form.content.trim();
   if (!source) {
-    errorMessage.value = '先写入一段正文，再使用 AI 排版';
+    errorMessage.value = copy.value.writeBeforeFormat;
     return;
   }
   if (source.length > 12000) {
-    errorMessage.value = 'AI 排版一次最多处理 12000 个字符';
+    errorMessage.value = copy.value.formatTooLong;
     return;
   }
 
@@ -414,7 +640,7 @@ async function formatWithAi() {
     mode.value = 'split';
     saveDraft();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'AI 排版暂时没有成功';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.formatFailed;
   } finally {
     formatting.value = false;
   }
@@ -422,7 +648,7 @@ async function formatWithAi() {
 
 async function generateCoverWithAi() {
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再生成封面';
+    errorMessage.value = copy.value.loginToCover;
     return;
   }
 
@@ -430,11 +656,11 @@ async function generateCoverWithAi() {
   const summary = form.summary.trim();
   const content = form.content.trim();
   if (!title && !summary && !content) {
-    errorMessage.value = '先写标题、摘要或正文，再生成封面';
+    errorMessage.value = copy.value.writeBeforeCover;
     return;
   }
   if (content.length > 12000) {
-    errorMessage.value = '生成封面一次最多参考 12000 个字符';
+    errorMessage.value = copy.value.coverTooLong;
     return;
   }
 
@@ -451,10 +677,12 @@ async function generateCoverWithAi() {
       promptLanguageCode: preferencesStore.languageCode
     });
     form.coverImageUrl = result.coverImageUrl;
-    coverGeneratedMessage.value = result.visualBrief ? `封面已生成：${result.visualBrief}` : '封面已生成';
+    coverGeneratedMessage.value = result.visualBrief
+      ? copy.value.coverGeneratedWith(result.visualBrief)
+      : copy.value.coverGenerated;
     saveDraft();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'AI 封面暂时没有生成成功';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.coverFailed;
   } finally {
     generatingCover.value = false;
   }
@@ -482,7 +710,7 @@ async function submit() {
     clearDraft();
     await router.push(`/posts/${postId}`);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : isEditMode.value ? '暂时保存不了，请稍后再试' : '暂时发布不了，请稍后再试';
+    errorMessage.value = error instanceof Error ? error.message : isEditMode.value ? copy.value.saveFailed : copy.value.publishFailed;
   } finally {
     loading.value = false;
   }
@@ -509,31 +737,31 @@ watch(
 <template>
   <section class="editor-page markdown-editor-page">
     <div class="page-heading">
-      <span class="section-kicker">Markdown Post</span>
+      <span class="section-kicker">{{ copy.kicker }}</span>
       <h1>{{ pageTitle }}</h1>
       <p>{{ pageDescription }}</p>
     </div>
 
-    <LoadingState v-if="loadingPost" label="正在读取帖子内容" />
+    <LoadingState v-if="loadingPost" :label="copy.loadingPost" />
 
     <form v-else class="editor-layout markdown-editor-layout" @submit.prevent="submit">
       <div class="editor-main markdown-editor-main">
         <div class="post-composer-head">
           <label>
-            <span>标题</span>
-            <input v-model="form.title" required maxlength="120" placeholder="例如：一次把 Markdown 学习笔记写清楚" />
+            <span>{{ copy.title }}</span>
+            <input v-model="form.title" required maxlength="120" :placeholder="copy.titlePlaceholder" />
           </label>
 
           <label>
-            <span>摘要</span>
-            <textarea v-model="form.summary" rows="3" maxlength="300" placeholder="用一两句话说明这篇内容能帮读者解决什么问题" />
+            <span>{{ copy.summary }}</span>
+            <textarea v-model="form.summary" rows="3" maxlength="300" :placeholder="copy.summaryPlaceholder" />
           </label>
         </div>
 
         <div class="cover-uploader">
           <div v-if="form.coverImageUrl" class="cover-preview">
             <img :src="form.coverImageUrl" alt="" />
-            <button type="button" title="移除封面" @click="removeCover">
+            <button type="button" :title="copy.removeCover" @click="removeCover">
               <X :size="16" />
             </button>
           </div>
@@ -547,51 +775,51 @@ watch(
               @drop.prevent="handleCoverDrop"
             >
               <ImagePlus :size="20" />
-              <strong>{{ form.coverImageUrl ? '更换封面' : '上传封面' }}</strong>
-              <span>点击选择，或把 JPG、PNG、WebP、GIF 拖到这里</span>
+              <strong>{{ form.coverImageUrl ? copy.replaceCover : copy.uploadCover }}</strong>
+              <span>{{ copy.coverDropHint }}</span>
               <input accept="image/*" type="file" @change="handleCoverUpload" />
             </label>
             <button class="ai-cover-button" type="button" :disabled="generatingCover || uploading || formatting" @click="generateCoverWithAi">
               <Images :size="19" />
-              <strong>{{ generatingCover ? '生成中' : 'AI 生成封面' }}</strong>
-              <span>根据标题、摘要和正文生成博客风格封面</span>
+              <strong>{{ generatingCover ? copy.generatingCover : copy.aiCover }}</strong>
+              <span>{{ copy.aiCoverHint }}</span>
             </button>
           </div>
         </div>
 
-        <div class="editor-toolbar" aria-label="Markdown 工具栏">
-          <button class="ai-format-button" type="button" title="AI 排版" :disabled="formatting || uploading || generatingCover" @click="formatWithAi">
+        <div class="editor-toolbar" :aria-label="copy.toolbarLabel">
+          <button class="ai-format-button" type="button" :title="copy.aiFormatTitle" :disabled="formatting || uploading || generatingCover" @click="formatWithAi">
             <Sparkles :size="17" />
-            <span>{{ formatting ? '排版中' : 'AI 排版' }}</span>
+            <span>{{ formatting ? copy.formatting : copy.aiFormat }}</span>
           </button>
-          <button type="button" title="二级标题" @click="insertMarkdown('## ', '', '标题')">
+          <button type="button" :title="copy.headingTitle" @click="insertMarkdown('## ', '', copy.heading)">
             <Heading2 :size="17" />
           </button>
-          <button type="button" title="加粗" @click="insertMarkdown('**', '**', '重点')">
+          <button type="button" :title="copy.boldTitle" @click="insertMarkdown('**', '**', copy.emphasis)">
             <Bold :size="17" />
           </button>
-          <button type="button" title="引用" @click="insertMarkdown('> ', '', '引用内容')">
+          <button type="button" :title="copy.quoteTitle" @click="insertMarkdown('> ', '', copy.quote)">
             <Quote :size="17" />
           </button>
-          <button type="button" title="链接" @click="insertLink">
+          <button type="button" :title="copy.linkTitle" @click="insertLink">
             <Link :size="17" />
           </button>
-          <button type="button" title="代码块" @click="insertCodeBlock">
+          <button type="button" :title="copy.codeTitle" @click="insertCodeBlock">
             <Code2 :size="17" />
           </button>
-          <button type="button" title="任务列表" @click="insertTaskList">
+          <button type="button" :title="copy.taskListTitle" @click="insertTaskList">
             <ListChecks :size="17" />
           </button>
-          <button type="button" title="有序列表" @click="insertOrderedList">
+          <button type="button" :title="copy.orderedListTitle" @click="insertOrderedList">
             <ListOrdered :size="17" />
           </button>
-          <button type="button" title="表格" @click="insertTable">
+          <button type="button" :title="copy.tableTitle" @click="insertTable">
             <Table2 :size="17" />
           </button>
-          <button type="button" title="图片链接" @click="insertImageByUrl">
+          <button type="button" :title="copy.imageLinkTitle" @click="insertImageByUrl">
             <ImagePlus :size="17" />
           </button>
-          <label class="toolbar-upload" title="上传并插入图片">
+          <label class="toolbar-upload" :title="copy.uploadImageTitle">
             <ImagePlus :size="17" />
             <input accept="image/*" type="file" @change="handleInlineImageUpload" />
           </label>
@@ -600,28 +828,28 @@ watch(
         <div class="editor-mode-tabs">
           <button type="button" :class="{ active: mode === 'write' }" @click="mode = 'write'">
             <Text :size="16" />
-            <span>编辑</span>
+            <span>{{ copy.modeWrite }}</span>
           </button>
           <button type="button" :class="{ active: mode === 'split' }" @click="mode = 'split'">
             <SplitSquareHorizontal :size="16" />
-            <span>分屏</span>
+            <span>{{ copy.modeSplit }}</span>
           </button>
           <button type="button" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">
             <Eye :size="16" />
-            <span>预览</span>
+            <span>{{ copy.modePreview }}</span>
           </button>
         </div>
 
         <div class="markdown-workbench" :class="`mode-${mode}`">
           <label v-show="mode !== 'preview'" class="markdown-source">
-            <span>正文 Markdown</span>
+            <span>{{ copy.bodyLabel }}</span>
             <MentionTextarea
               ref="editorRef"
               v-model="form.content"
               required
               spellcheck="false"
               :class="{ 'drag-active': editorDragActive }"
-              placeholder="可以直接写 Markdown，也可以用上方工具栏插入格式。"
+              :placeholder="copy.bodyPlaceholder"
               @dragenter.prevent="editorDragActive = true"
               @dragover.prevent="editorDragActive = true"
               @dragleave.prevent="editorDragActive = false"
@@ -633,14 +861,14 @@ watch(
 
           <section v-show="mode !== 'write'" class="markdown-preview-panel">
             <div class="preview-head">
-              <span>发布预览</span>
-              <small>{{ wordCount }} 字 · 约 {{ readingMinutes }} 分钟读完</small>
+              <span>{{ copy.previewHead }}</span>
+              <small>{{ previewStats }}</small>
             </div>
             <article class="preview-document">
               <img v-if="form.coverImageUrl" class="preview-cover" :src="form.coverImageUrl" alt="" />
-              <h1>{{ form.title || '未命名帖子' }}</h1>
+              <h1>{{ form.title || copy.untitled }}</h1>
               <p v-if="form.summary" class="article-summary">{{ form.summary }}</p>
-              <MarkdownRenderer :content="form.content || '从这里开始写正文。'" />
+              <MarkdownRenderer :content="form.content || copy.previewEmpty" />
             </article>
           </section>
         </div>
@@ -652,25 +880,11 @@ watch(
         <div class="form-actions composer-actions">
           <button class="secondary-button" type="button" :disabled="!hasDraft" @click="saveDraft">
             <Save :size="17" />
-            <span>保存草稿</span>
+            <span>{{ copy.saveDraft }}</span>
           </button>
           <button class="primary-button" type="submit" :disabled="loading || uploading || formatting || generatingCover">
             <Send :size="17" />
-            <span>{{
-              loading
-                ? isEditMode
-                  ? '正在保存'
-                  : '正在发布'
-                : uploading
-                  ? '正在上传'
-                  : generatingCover
-                    ? '正在生成封面'
-                    : formatting
-                      ? '正在排版'
-                      : isEditMode
-                        ? '保存修改'
-                        : '发布到知识流'
-            }}</span>
+            <span>{{ submitLabel }}</span>
           </button>
         </div>
       </div>
@@ -679,10 +893,10 @@ watch(
         <section class="side-panel">
           <div class="panel-title">
             <PenLine :size="18" />
-            <span>发布设置</span>
+            <span>{{ copy.publishSettings }}</span>
           </div>
           <label>
-            <span>主题</span>
+            <span>{{ copy.topic }}</span>
             <select v-model="form.categoryId">
               <option v-for="category in categories" :key="category.id" :value="category.id">
                 {{ category.label }}
@@ -690,10 +904,10 @@ watch(
             </select>
           </label>
           <label>
-            <span>内容语言</span>
+            <span>{{ copy.contentLanguage }}</span>
             <select v-model="form.originalLanguage">
-              <option value="zh_CN">中文</option>
-              <option value="en_US">English</option>
+              <option value="zh_CN">{{ languageLabel('zh_CN') }}</option>
+              <option value="en_US">{{ languageLabel('en_US') }}</option>
             </select>
           </label>
         </section>
@@ -701,7 +915,7 @@ watch(
         <section class="side-panel preset-panel">
           <div class="panel-title">
             <FileText :size="18" />
-            <span>文章预设</span>
+            <span>{{ copy.presets }}</span>
           </div>
           <button v-for="template in templates" :key="template.name" type="button" @click="applyTemplate(template.content)">
             <strong>{{ template.name }}</strong>
@@ -712,9 +926,9 @@ watch(
         <section class="side-panel">
           <div class="panel-title">
             <Languages :size="18" />
-            <span>语言规则</span>
+            <span>{{ copy.languageRules }}</span>
           </div>
-          <p>帖子展示以你写作的语言为准。切换站点语言时，如果没有对应版本，会展示原文，不会自动翻译你的内容。</p>
+          <p>{{ copy.languageRulesText }}</p>
         </section>
       </aside>
     </form>

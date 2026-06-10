@@ -7,6 +7,7 @@ import topicHelpUrl from '@/assets/topic-help.svg';
 import topicLearningUrl from '@/assets/topic-learning.svg';
 import topicSystemsUrl from '@/assets/topic-systems.svg';
 import topicWritingUrl from '@/assets/topic-writing.svg';
+import { languageLabel } from '@/i18n/labels';
 import { usePreferencesStore } from '@/stores/preferences';
 import { useSessionStore } from '@/stores/session';
 import type { PostSummary, TopicCategory } from '@/types/api';
@@ -23,7 +24,7 @@ const sessionStore = useSessionStore();
 const preferencesStore = usePreferencesStore();
 
 function openPost() {
-  router.push({ path: `/posts/${props.post.postId}`, query: { language: props.post.languageCode } });
+  void router.push(`/posts/${props.post.postId}`);
 }
 
 const coverUrl = computed(() => {
@@ -67,7 +68,7 @@ const copy = computed(() =>
         </span>
         <span>
           <Languages :size="15" />
-          {{ post.languageCode }}
+          {{ languageLabel(post.languageCode) }}
         </span>
         <span v-if="publishTime">
           <CalendarClock :size="15" />

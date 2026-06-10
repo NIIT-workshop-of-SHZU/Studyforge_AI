@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/common.sh
+source "$ROOT_DIR/scripts/lib/common.sh"
 FRONTEND_ROOT="$ROOT_DIR/studyforge-frontend"
 APP_DIR="$FRONTEND_ROOT/apps/knowledge-web"
 VITE_BIN="$FRONTEND_ROOT/node_modules/.bin/vite"
@@ -9,7 +11,7 @@ PORT="${PORT:-5174}"
 LOG_FILE="${LOG_FILE:-/tmp/studyforge-knowledge-vite.log}"
 PID_FILE="${PID_FILE:-/tmp/studyforge-knowledge-vite.pid}"
 
-if ss -ltn | grep -q ":${PORT} "; then
+if port_in_use "$PORT"; then
   echo "StudyForge knowledge web already appears to be listening on port ${PORT}."
   exit 0
 fi
@@ -20,8 +22,8 @@ if [[ ! -x "$VITE_BIN" ]]; then
 fi
 
 cd "$APP_DIR"
-setsid "$VITE_BIN" --host 0.0.0.0 --port "$PORT" > "$LOG_FILE" 2>&1 < /dev/null &
-echo "$!" > "$PID_FILE"
+start_detached "$LOG_FILE" "$VITE_BIN" --host 0.0.0.0 --port "$PORT"
+echo "$!" >"$PID_FILE"
 
 echo "StudyForge knowledge web started."
 echo "PID: $(cat "$PID_FILE")"

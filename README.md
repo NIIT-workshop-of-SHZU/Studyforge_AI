@@ -12,14 +12,22 @@ StudyForge AI 面向学习者的知识沉淀与协作场景，支持发布笔记
 
 ## Features / 功能亮点
 
-- User knowledge platform: posts, categories, comments, likes, favorites, profiles, friends, notifications, and study activities.
-- 用户端知识平台：文章、分类、评论、点赞、收藏、个人主页、好友、通知和学习动态。
-- AI study tools: summary generation, quiz/review cards, article Q&A, AI formatting, and cover-image generation.
-- AI 学习工具：摘要生成、复习卡片、文章问答、AI 排版和封面生图。
+- User knowledge platform: posts, categories, comments, likes, favorites, profiles, follow/followers, browsing history, friends, notifications, and study activities.
+- 用户端知识平台：文章、分类、评论、点赞、收藏、个人主页、关注/粉丝、浏览历史、好友、通知和学习动态。
+- Learning memory: editable user learning profile that drives favorite importance ranking and AI context injection.
+- 学习记忆：可编辑的个人学习画像，用于收藏重要性排序，并注入 AI 上下文。
+- AI study tools: summary generation, quiz/review cards, article Q&A, AI formatting, cover-image generation, and memory-aware responses.
+- AI 学习工具：摘要生成、复习卡片、文章问答、AI 排版、封面生图，以及结合学习记忆的智能回复。
+- Study space: favorites, reading history, review cards, and importance-based collection sorting.
+- 学习空间：收藏、阅读历史、复习卡片，以及按重要性排序的收藏视图。
+- Help community: learning Q&A with threaded answers, likes, and accepted solutions.
+- 求助社区：学习问答、楼层回复、点赞与采纳最佳答案。
 - Voice capability: text-to-speech and voice record support.
 - 语音能力：文本转语音与语音记录支持。
 - Skill and roadmap modules: skill library, roadmap details, and user progress tracking.
 - 技能与路线模块：技能库、学习路线详情和用户进度跟踪。
+- Homepage studio: customizable user homepage layouts shared in the community gallery.
+- 主页工坊：可自定义个人主页布局，并分享到社区主页广场。
 - Admin console: community moderation, post management, reports, user state, integration settings, and health checks.
 - 管理后台：社区审核、帖子管理、举报处理、账号状态、集成配置和健康检查。
 - Staging deployment: GitHub Actions builds Docker images, pushes to GHCR, and deploys with Docker Compose.
