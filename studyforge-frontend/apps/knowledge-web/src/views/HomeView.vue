@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Activity, BadgeCheck, BrainCircuit, Compass, RefreshCw, Search, Sparkles, TrendingUp } from '@lucide/vue';
 import { getPosts } from '@/api/posts';
@@ -7,6 +7,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import KnowledgeCard from '@/components/KnowledgeCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import TopicRail from '@/components/TopicRail.vue';
+import { languageLabel } from '@/i18n/labels';
 import { usePreferencesStore } from '@/stores/preferences';
 import type { PostSummary, TopicCategory } from '@/types/api';
 import { toDate } from '@/utils/date';
@@ -75,7 +76,6 @@ const visiblePosts = computed(() => {
     .map((post, index) => ({ post, index }))
     .sort(
       (first, second) =>
-        languageRank(first.post.languageCode) - languageRank(second.post.languageCode) ||
         postTimestamp(second.post) - postTimestamp(first.post) ||
         first.index - second.index
     )
@@ -180,20 +180,11 @@ async function loadPosts() {
   }
 }
 
-function languageRank(languageCode: string) {
-  return languageCode === preferencesStore.languageCode ? 0 : 1;
-}
-
 function postTimestamp(post: PostSummary) {
   return toDate(post.createdTime)?.getTime() ?? 0;
 }
 
 onMounted(loadPosts);
-
-watch(
-  () => preferencesStore.languageCode,
-  () => loadPosts()
-);
 </script>
 
 <template>
@@ -214,7 +205,7 @@ watch(
             </span>
             <span>
               <BadgeCheck :size="16" />
-              {{ preferencesStore.languageCode }}
+              {{ languageLabel(preferencesStore.languageCode) }}
             </span>
             <span>
               <Sparkles :size="16" />

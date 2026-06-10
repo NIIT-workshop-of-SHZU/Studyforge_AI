@@ -182,6 +182,14 @@ public class LocalFallbackAiServiceImpl implements AiService {
     }
 
     @Override
+    public String extractBatchPostSemanticTags(String itemsPayloadJson, String language) {
+        if (itemsPayloadJson == null || itemsPayloadJson.isBlank()) {
+            return "[]";
+        }
+        return "[]";
+    }
+
+    @Override
     public GeneratedCover generateCover(String title, String summary, String content, String language) {
         return null;
     }

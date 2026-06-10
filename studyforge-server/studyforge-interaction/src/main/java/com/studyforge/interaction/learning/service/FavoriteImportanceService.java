@@ -13,7 +13,11 @@ public interface FavoriteImportanceService {
 
     void recomputeCollection(Long userId, Long collectionId, String languageCode);
 
+    void recomputeCollection(Long userId, Long collectionId, String languageCode, boolean allowLlmForPosts);
+
     void recomputeAllForUser(Long userId, String languageCode);
+
+    void recomputeAllForUser(Long userId, String languageCode, boolean allowLlmForPosts);
 
     void setPinned(Long userId, Long collectionId, Long postId, boolean pinned, String languageCode);
 }

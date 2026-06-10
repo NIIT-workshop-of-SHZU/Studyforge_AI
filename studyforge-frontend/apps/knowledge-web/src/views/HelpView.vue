@@ -52,6 +52,125 @@ const form = reactive({
 });
 
 const titleInput = ref<HTMLInputElement | null>(null);
+
+const copy = computed(() => {
+  if (preferencesStore.languageCode === 'en_US') {
+    return {
+      kicker: 'Help Desk',
+      title: 'Help threads',
+      subtitle: 'Describe the context, what you tried, and what outcome you need so others can reply with steps, references, or debugging direction.',
+      ask: 'Ask a question',
+      refresh: 'Refresh list',
+      statsAria: 'Help desk statistics',
+      allQuestions: 'All questions',
+      waiting: 'Waiting',
+      solved: 'Resolved',
+      rewardPoints: 'Reward points',
+      recentTitle: 'Recent questions',
+      recentDesc: 'Pick a question to read the context, answers, and follow-up suggestions.',
+      loading: 'Loading help threads',
+      loadErrorTitle: 'Unable to load',
+      loadErrorFallback: 'Help threads could not be loaded.',
+      emptyTitle: 'No help threads yet',
+      emptyDesc: 'When you get stuck, start a question here.',
+      points: 'pts',
+      asker: (id: number) => `Asker #${id}`,
+      answers: (count: number) => `${count} answers`,
+      reward: (points: number) => `${points} points`,
+      answersTitle: 'Answers and suggestions',
+      noAnswers: 'No answers yet. You can start with a debugging direction, reference, or actionable step.',
+      answerPlaceholder: 'Share your suggestion, steps, or references. Markdown is supported. Type @ to mention a friend.',
+      submitAnswer: 'Submit answer',
+      composeTitle: 'Ask a question',
+      titleLabel: 'Title',
+      titlePlaceholder: 'Summarize where you are stuck',
+      backgroundLabel: 'Background',
+      backgroundPlaceholder: 'Describe what you tried and what help you need. Markdown is supported.',
+      rewardLabel: 'Reward points',
+      publish: 'Publish question',
+      guideTitle: 'Get better answers',
+      guideItems: [
+        'Include environment, error messages, and methods you already tried.',
+        'Break the expected outcome into concrete questions so others can locate the issue.',
+        'Answers can use Markdown so code, links, and steps stay clear.'
+      ],
+      loginToAsk: 'Please sign in before publishing a help thread.',
+      publishFailed: 'The help thread could not be published.',
+      loginToAnswer: 'Please sign in before answering.',
+      answerFailed: 'The answer could not be sent.',
+      loginToReply: 'Please sign in before replying.',
+      replyFailed: 'The reply could not be sent.',
+      loginToLike: 'Please sign in before liking.',
+      likeFailed: 'The like action did not complete.',
+      loginToDelete: 'Please sign in before deleting.',
+      deleteFailed: 'The answer could not be deleted.',
+      deleteConfirm: 'Delete this answer? The floor number and replies will be kept.',
+      deletedAnswer: 'This answer was deleted.',
+      statusOpen: 'Open',
+      statusSolved: 'Solved',
+      statusClosed: 'Closed',
+      statusPending: 'Pending'
+    };
+  }
+
+  return {
+    kicker: 'Help Desk',
+    title: '求助讨论',
+    subtitle: '把问题背景、尝试过的办法和期望结果写清楚，社区成员可以直接给出步骤、资料或排查方向。',
+    ask: '提出问题',
+    refresh: '刷新列表',
+    statsAria: '求助讨论统计',
+    allQuestions: '全部问题',
+    waiting: '等待讨论',
+    solved: '已有结论',
+    rewardPoints: '积分奖励',
+    recentTitle: '最近的问题',
+    recentDesc: '选择一个问题查看背景、回答和补充建议',
+    loading: '正在加载求助',
+    loadErrorTitle: '暂时无法加载',
+    loadErrorFallback: '求助内容暂时没取到',
+    emptyTitle: '还没有求助',
+    emptyDesc: '遇到卡点时，可以从这里发起一个问题。',
+    points: '分',
+    asker: (id: number) => `提问者 #${id}`,
+    answers: (count: number) => `${count} 条回答`,
+    reward: (points: number) => `${points} 积分`,
+    answersTitle: '回答与建议',
+    noAnswers: '还没有回答。可以先给出一个排查方向、参考资料或可执行步骤。',
+    answerPlaceholder: '写下你的建议、步骤或参考资料，支持 Markdown；输入 @ 可以选择好友',
+    submitAnswer: '提交回答',
+    composeTitle: '提出问题',
+    titleLabel: '标题',
+    titlePlaceholder: '一句话说清卡在哪里',
+    backgroundLabel: '背景',
+    backgroundPlaceholder: '写下你已经试过什么、希望得到什么帮助，支持 Markdown',
+    rewardLabel: '奖励积分',
+    publish: '发布求助',
+    guideTitle: '更容易得到帮助',
+    guideItems: [
+      '写清楚环境、报错信息和已经尝试过的方法。',
+      '把期望结果拆成具体问题，别人更容易定位。',
+      '回答可以使用 Markdown，代码、链接和步骤会更清晰。'
+    ],
+    loginToAsk: '请先登录再发布求助',
+    publishFailed: '暂时发布不了求助',
+    loginToAnswer: '请先登录再回答',
+    answerFailed: '暂时发送不了回答',
+    loginToReply: '请先登录再回复',
+    replyFailed: '暂时发送不了回复',
+    loginToLike: '请先登录再点赞',
+    likeFailed: '暂时点赞不了',
+    loginToDelete: '请先登录再删除',
+    deleteFailed: '暂时删除不了',
+    deleteConfirm: '确定删除这条回答吗？删除后会保留楼层和回复关系。',
+    deletedAnswer: '这条回答已删除',
+    statusOpen: '进行中',
+    statusSolved: '已解决',
+    statusClosed: '已关闭',
+    statusPending: '待处理'
+  };
+});
+
 const sortedHelps = computed(() =>
   helps.value
     .map((help, index) => ({ help, index }))
@@ -99,15 +218,15 @@ function preferredHelpId() {
 function statusLabel(status: string) {
   const normalized = normalizeStatus(status);
   if (normalized === 'OPEN') {
-    return '进行中';
+    return copy.value.statusOpen;
   }
   if (normalized === 'SOLVED' || normalized === 'RESOLVED') {
-    return '已解决';
+    return copy.value.statusSolved;
   }
   if (normalized === 'CLOSED') {
-    return '已关闭';
+    return copy.value.statusClosed;
   }
-  return status || '待处理';
+  return status || copy.value.statusPending;
 }
 
 function focusCompose() {
@@ -128,7 +247,7 @@ async function loadHelps() {
       await loadAnswers(activeHelpId.value);
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '求助内容暂时没取到';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.loadErrorFallback;
   } finally {
     loading.value = false;
   }
@@ -143,7 +262,7 @@ async function loadAnswers(helpId: number) {
 
 async function publishHelp() {
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再发布求助';
+    errorMessage.value = copy.value.loginToAsk;
     return;
   }
 
@@ -155,7 +274,7 @@ async function publishHelp() {
     await loadHelps();
     activeHelpId.value = helpId;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '暂时发布不了求助';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.publishFailed;
   }
 }
 
@@ -164,7 +283,7 @@ async function sendAnswer() {
     return;
   }
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再回答';
+    errorMessage.value = copy.value.loginToAnswer;
     return;
   }
 
@@ -173,7 +292,7 @@ async function sendAnswer() {
     answerText.value = '';
     await loadAnswers(activeHelp.value.helpId);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '暂时发送不了回答';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.answerFailed;
   }
 }
 
@@ -182,7 +301,7 @@ async function sendAnswerReply() {
     return;
   }
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再回复';
+    errorMessage.value = copy.value.loginToReply;
     return;
   }
 
@@ -192,7 +311,7 @@ async function sendAnswerReply() {
     replyAnswerText.value = '';
     replyingToAnswer.value = null;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '暂时发送不了回复';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.replyFailed;
   }
 }
 
@@ -215,7 +334,7 @@ async function likeAnswer(node: ForumThreadNode) {
     return;
   }
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再点赞';
+    errorMessage.value = copy.value.loginToLike;
     return;
   }
 
@@ -223,16 +342,16 @@ async function likeAnswer(node: ForumThreadNode) {
     const updated = await toggleHelpAnswerLike(activeHelp.value.helpId, node.id);
     upsertAnswer(activeHelp.value.helpId, updated);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '暂时点赞不了';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.likeFailed;
   }
 }
 
 async function removeAnswer(node: ForumThreadNode) {
-  if (!activeHelp.value || !window.confirm('确定删除这条回答吗？删除后会保留楼层和回复关系。')) {
+  if (!activeHelp.value || !window.confirm(copy.value.deleteConfirm)) {
     return;
   }
   if (!sessionStore.isAuthenticated) {
-    errorMessage.value = '请先登录再删除';
+    errorMessage.value = copy.value.loginToDelete;
     return;
   }
 
@@ -242,12 +361,12 @@ async function removeAnswer(node: ForumThreadNode) {
       ...answers.value,
       [activeHelp.value.helpId]: activeAnswers.value.map((answer) =>
         answer.answerId === node.id
-          ? { ...answer, status: 'DELETED', deleted: true, canDelete: false, likedByViewer: false, content: '这条回答已删除' }
+          ? { ...answer, status: 'DELETED', deleted: true, canDelete: false, likedByViewer: false, content: copy.value.deletedAnswer }
           : answer
       )
     };
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '暂时删除不了';
+    errorMessage.value = error instanceof Error ? error.message : copy.value.deleteFailed;
   }
 }
 
@@ -343,36 +462,36 @@ watch(
   <section class="help-page">
     <div class="help-hero">
       <div class="help-hero-copy">
-        <span class="section-kicker">Help Desk</span>
-        <h1>求助讨论</h1>
-        <p>把问题背景、尝试过的办法和期望结果写清楚，社区成员可以直接给出步骤、资料或排查方向。</p>
+        <span class="section-kicker">{{ copy.kicker }}</span>
+        <h1>{{ copy.title }}</h1>
+        <p>{{ copy.subtitle }}</p>
         <div class="help-hero-actions">
           <button class="primary-button" type="button" @click="focusCompose">
             <MessageSquarePlus :size="18" />
-            <span>提出问题</span>
+            <span>{{ copy.ask }}</span>
           </button>
           <button class="secondary-button" type="button" :disabled="loading" @click="loadHelps">
             <RefreshCw :size="17" />
-            <span>刷新列表</span>
+            <span>{{ copy.refresh }}</span>
           </button>
         </div>
       </div>
-      <div class="help-hero-stats" aria-label="求助讨论统计">
+      <div class="help-hero-stats" :aria-label="copy.statsAria">
         <div>
           <strong>{{ helps.length }}</strong>
-          <span>全部问题</span>
+          <span>{{ copy.allQuestions }}</span>
         </div>
         <div>
           <strong>{{ openHelpCount }}</strong>
-          <span>等待讨论</span>
+          <span>{{ copy.waiting }}</span>
         </div>
         <div>
           <strong>{{ solvedHelpCount }}</strong>
-          <span>已有结论</span>
+          <span>{{ copy.solved }}</span>
         </div>
         <div>
           <strong>{{ totalRewardPoints }}</strong>
-          <span>积分奖励</span>
+          <span>{{ copy.rewardPoints }}</span>
         </div>
       </div>
     </div>
@@ -382,14 +501,14 @@ watch(
         <section class="help-list">
           <div class="feed-toolbar help-section-toolbar">
             <div>
-              <strong>最近的问题</strong>
-              <small>选择一个问题查看背景、回答和补充建议</small>
+              <strong>{{ copy.recentTitle }}</strong>
+              <small>{{ copy.recentDesc }}</small>
             </div>
           </div>
 
-          <LoadingState v-if="loading" label="正在加载求助" />
-          <EmptyState v-else-if="errorMessage" title="暂时无法加载" :description="errorMessage" />
-          <EmptyState v-else-if="helps.length === 0" title="还没有求助" description="遇到卡点时，可以从这里发起一个问题。" />
+          <LoadingState v-if="loading" :label="copy.loading" />
+          <EmptyState v-else-if="errorMessage" :title="copy.loadErrorTitle" :description="errorMessage" />
+          <EmptyState v-else-if="helps.length === 0" :title="copy.emptyTitle" :description="copy.emptyDesc" />
 
           <div v-else class="help-items">
             <button
@@ -402,12 +521,12 @@ watch(
             >
               <span class="help-item-topline">
                 <span class="help-status-pill" :data-status="normalizeStatus(help.status)">{{ statusLabel(help.status) }}</span>
-                <span v-if="help.rewardPoints > 0" class="help-reward-pill">{{ help.rewardPoints }} 分</span>
+                <span v-if="help.rewardPoints > 0" class="help-reward-pill">{{ help.rewardPoints }} {{ copy.points }}</span>
               </span>
               <strong>{{ help.title }}</strong>
               <small>{{ help.description }}</small>
               <span class="help-item-footer">
-                <span>提问者 #{{ help.userId }}</span>
+                <span>{{ copy.asker(help.userId) }}</span>
                 <span v-if="helpTime(help)" class="time-line">
                   <CalendarClock :size="14" />
                   {{ helpTime(help) }}
@@ -421,9 +540,9 @@ watch(
           <section v-if="activeHelp" class="help-detail">
             <div class="help-detail-topline">
               <span class="help-status-pill" :data-status="normalizeStatus(activeHelp.status)">{{ statusLabel(activeHelp.status) }}</span>
-              <span>提问者 #{{ activeHelp.userId }}</span>
-              <span v-if="activeHelp.rewardPoints > 0">{{ activeHelp.rewardPoints }} 积分</span>
-              <span>{{ activeAnswers.length }} 条回答</span>
+              <span>{{ copy.asker(activeHelp.userId) }}</span>
+              <span v-if="activeHelp.rewardPoints > 0">{{ copy.reward(activeHelp.rewardPoints) }}</span>
+              <span>{{ copy.answers(activeAnswers.length) }}</span>
               <span v-if="helpTime(activeHelp)">
                 <CalendarClock :size="15" />
                 {{ helpTime(activeHelp) }}
@@ -436,7 +555,7 @@ watch(
           <section v-if="activeHelp" class="help-answer-panel">
             <div class="panel-title">
               <CircleHelp :size="18" />
-              <span>回答与建议</span>
+              <span>{{ copy.answersTitle }}</span>
             </div>
             <div v-if="activeAnswerTree.length" class="comment-list help-answer-list forum-thread-list">
               <ForumThreadItem
@@ -445,8 +564,6 @@ watch(
                 :node="answer"
                 :replying-to-id="replyingToAnswer?.answerId ?? null"
                 :reply-text="replyAnswerText"
-                reply-placeholder="写下回复，输入 @用户名 可以提醒对方"
-                submit-label="发送回复"
                 @reply="startAnswerReply"
                 @cancel-reply="cancelAnswerReply"
                 @update-reply-text="replyAnswerText = $event"
@@ -455,10 +572,10 @@ watch(
                 @delete="removeAnswer"
               />
             </div>
-            <p v-else>还没有回答。可以先给出一个排查方向、参考资料或可执行步骤。</p>
+            <p v-else>{{ copy.noAnswers }}</p>
             <form class="compact-form help-answer-form" @submit.prevent="sendAnswer">
-              <MentionTextarea v-model="answerText" rows="5" placeholder="写下你的建议、步骤或参考资料，支持 Markdown；输入 @ 可以选择好友" />
-              <button class="secondary-button full-width" type="submit">提交回答</button>
+              <MentionTextarea v-model="answerText" rows="5" :placeholder="copy.answerPlaceholder" />
+              <button class="secondary-button full-width" type="submit">{{ copy.submitAnswer }}</button>
             </form>
           </section>
         </div>
@@ -468,24 +585,24 @@ watch(
         <section class="side-panel help-compose-panel">
           <div class="panel-title">
             <MessageSquarePlus :size="18" />
-            <span>提出问题</span>
+            <span>{{ copy.composeTitle }}</span>
           </div>
           <form class="compact-form" @submit.prevent="publishHelp">
             <label>
-              <span>标题</span>
-              <input id="help-title" ref="titleInput" v-model.trim="form.title" required placeholder="一句话说清卡在哪里" />
+              <span>{{ copy.titleLabel }}</span>
+              <input id="help-title" ref="titleInput" v-model.trim="form.title" required :placeholder="copy.titlePlaceholder" />
             </label>
             <label>
-              <span>背景</span>
-              <textarea v-model.trim="form.description" required rows="8" placeholder="写下你已经试过什么、希望得到什么帮助，支持 Markdown" />
+              <span>{{ copy.backgroundLabel }}</span>
+              <textarea v-model.trim="form.description" required rows="8" :placeholder="copy.backgroundPlaceholder" />
             </label>
             <label>
-              <span>奖励积分</span>
+              <span>{{ copy.rewardLabel }}</span>
               <input v-model.number="form.rewardPoints" min="0" type="number" />
             </label>
             <button class="primary-button full-width" type="submit">
               <Send :size="17" />
-              <span>发布求助</span>
+              <span>{{ copy.publish }}</span>
             </button>
           </form>
         </section>
@@ -493,12 +610,10 @@ watch(
         <section class="side-panel help-guide-panel">
           <div class="panel-title">
             <CircleHelp :size="18" />
-            <span>更容易得到帮助</span>
+            <span>{{ copy.guideTitle }}</span>
           </div>
           <ul>
-            <li>写清楚环境、报错信息和已经尝试过的方法。</li>
-            <li>把期望结果拆成具体问题，别人更容易定位。</li>
-            <li>回答可以使用 Markdown，代码、链接和步骤会更清晰。</li>
+            <li v-for="item in copy.guideItems" :key="item">{{ item }}</li>
           </ul>
         </section>
       </aside>

@@ -35,12 +35,10 @@ export function getPosts(query: ListPostQuery) {
   );
 }
 
-export function getPostDetail(postId: number | string, languageCode: string) {
+export function getPostDetail(postId: number | string, languageCode?: string) {
   return unwrap<PostDetail>(
     http.get(`/posts/${postId}`, {
-      params: {
-        languageCode
-      }
+      params: languageCode ? { languageCode } : undefined
     })
   );
 }

@@ -302,7 +302,7 @@ function activityChipText(activity: UserActivity) {
 
 function activityTarget(activity: UserActivity) {
   if (activity.postId) {
-    return { path: `/posts/${activity.postId}`, query: { language: activity.languageCode || preferencesStore.languageCode } };
+    return { path: `/posts/${activity.postId}`, query: activity.languageCode ? { language: activity.languageCode } : {} };
   }
   if (activity.helpId) {
     return { path: '/help', query: { helpId: activity.helpId } };
@@ -355,7 +355,7 @@ async function requestFriendship() {
 
 onMounted(loadProfile);
 
-watch(() => [route.fullPath, sessionStore.isAuthenticated, preferencesStore.languageCode], () => loadProfile());
+watch(() => [route.fullPath, sessionStore.isAuthenticated], () => loadProfile());
 </script>
 
 <template>

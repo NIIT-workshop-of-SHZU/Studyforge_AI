@@ -7,6 +7,9 @@ import com.studyforge.content.service.PostCommandService;
 import com.studyforge.content.service.PostQueryService;
 import com.studyforge.content.vo.PostDetailVO;
 import com.studyforge.content.vo.PostSummaryVO;
+import com.studyforge.interaction.learning.model.SemanticTag;
+import com.studyforge.interaction.learning.service.impl.PostSemanticTagService;
+import com.studyforge.interaction.learning.service.impl.PostSemanticTagWarmupService;
 import com.studyforge.system.service.AuthService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,18 +27,51 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostController {
     private final PostQueryService postQueryService;
     private final PostCommandService postCommandService;
+    private final PostSemanticTagService postSemanticTagService;
+    private final PostSemanticTagWarmupService postSemanticTagWarmupService;
     private final AuthService authService;
 
-    public PostController(PostQueryService postQueryService, PostCommandService postCommandService, AuthService authService) {
+    public PostController(PostQueryService postQueryService,
+                          PostCommandService postCommandService,
+                          PostSemanticTagService postSemanticTagService,
+                          PostSemanticTagWarmupService postSemanticTagWarmupService,
+                          AuthService authService) {
         this.postQueryService = postQueryService;
         this.postCommandService = postCommandService;
+        this.postSemanticTagService = postSemanticTagService;
+        this.postSemanticTagWarmupService = postSemanticTagWarmupService;
         this.authService = authService;
     }
 
     @GetMapping("/{postId}")
     public ApiResponse<PostDetailVO> detail(@PathVariable("postId") Long postId,
-                                            @RequestParam(name = "languageCode", defaultValue = "zh_CN") String languageCode) {
-        return ApiResponse.success(postQueryService.getDetail(postId, languageCode));
+                                            @RequestParam(name = "languageCode", required = false) String languageCode) {
+        PostDetailVO detail = postQueryService.getDetail(postId, languageCode);
+        String effectiveLanguage = languageCode == null || languageCode.isBlank()
+                ? detail.languageCode()
+                : languageCode;
+        if (postSemanticTagService.needsLlmWarmup(postId, effectiveLanguage, detail.title(), detail.summary())) {
+            postSemanticTagWarmupService.warmPostAsync(
+                    postId,
+                    effectiveLanguage,
+                    detail.title(),
+                    detail.summary()
+            );
+        }
+        List<SemanticTag> semanticTags = postSemanticTagService.tagsForDisplay(
+                postId,
+                effectiveLanguage,
+                detail.title(),
+                detail.summary(),
+                ""
+        );
+        List<String> labels = semanticTags.stream()
+                .map(SemanticTag::tag)
+                .filter(tag -> tag != null && !tag.isBlank())
+                .distinct()
+                .limit(12)
+                .toList();
+        return ApiResponse.success(detail.withSemanticTags(labels));
     }
 
     @GetMapping

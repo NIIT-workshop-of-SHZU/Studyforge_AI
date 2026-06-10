@@ -79,7 +79,9 @@ const copy = computed(() =>
         expired: 'Your session expired. Please sign in again to manage collections.',
         loadFailed: 'Collections could not be loaded.',
         openFailed: 'This collection could not be opened.',
-        createFailed: 'Collection could not be created.'
+        createFailed: 'Collection could not be created.',
+        emptyTagFilter: 'No saved posts match this tag',
+        emptyTagFilterDesc: 'Clear the tag filter or try another learning focus from MEMORY.md.'
       }
     : {
         title: '收藏夹',
@@ -105,6 +107,8 @@ const copy = computed(() =>
         remove: '移出',
         emptyCollection: '这个收藏夹还没有文章',
         emptyCollectionDesc: '在文章详情页点收藏后，会先进入默认收藏；你也可以在这里继续新建主题收藏夹。',
+        emptyTagFilter: '没有符合该标签的收藏',
+        emptyTagFilterDesc: '试试取消标签筛选，或换一个 MEMORY.md 里的学习重点标签。',
         defaultCollectionDesc: '还没有说明。',
         memory: 'MEMORY.md',
         sortImportance: '对我更重要',
@@ -127,7 +131,13 @@ const copy = computed(() =>
 
 const activeCollection = computed(() => collections.value.find((collection) => collection.collectionId === activeCollectionId.value) ?? collections.value[0] ?? null);
 const totalSaved = computed(() => collections.value.reduce((total, collection) => total + collection.itemCount, 0));
-const tagFilters = computed(() => interestTags.value.slice(0, 8));
+const tagFilters = computed(() =>
+  interestTags.value
+    .filter((tag) => tag.polarity !== 'dislike')
+    .filter((tag, index, all) => all.findIndex((item) => item.tag.toLowerCase() === tag.tag.toLowerCase()) === index)
+    .sort((left, right) => right.weight - left.weight)
+    .slice(0, 6)
+);
 
 const categories = computed<Record<string, TopicCategory>>(() =>
   preferencesStore.languageCode === 'en_US'
@@ -189,10 +199,19 @@ async function loadLearningMemory(requestId: number, userId: number) {
     const memory = await getLearningMemory();
     if (isCurrentCollectionsRequest(requestId, userId)) {
       interestTags.value = memory.interestTags ?? [];
+      const allowedTags = new Set(
+        (memory.interestTags ?? [])
+          .filter((tag) => tag.polarity !== 'dislike')
+          .map((tag) => tag.tag.toLowerCase())
+      );
+      if (activeTag.value && !allowedTags.has(activeTag.value.toLowerCase())) {
+        activeTag.value = '';
+      }
     }
   } catch {
     if (isCurrentCollectionsRequest(requestId, userId)) {
       interestTags.value = [];
+      activeTag.value = '';
     }
   }
 }
@@ -498,7 +517,11 @@ watch(
               </div>
             </article>
           </div>
-          <EmptyState v-else :title="copy.emptyCollection" :description="copy.emptyCollectionDesc" />
+          <EmptyState
+            v-else
+            :title="activeTag ? copy.emptyTagFilter : copy.emptyCollection"
+            :description="activeTag ? copy.emptyTagFilterDesc : copy.emptyCollectionDesc"
+          />
         </main>
       </section>
     </template>

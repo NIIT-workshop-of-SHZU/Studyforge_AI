@@ -17,6 +17,10 @@ public record InterestTag(String tag, double weight, String source, String polar
         this(tag, weight, source, "like");
     }
 
+    public boolean isDislike() {
+        return "dislike".equalsIgnoreCase(polarity);
+    }
+
     public SemanticTag toSemanticTag() {
         return new SemanticTag(tag, weight, polarity);
     }

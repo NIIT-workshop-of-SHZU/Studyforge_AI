@@ -71,6 +71,9 @@ export interface PostDetail extends PostSummary {
   authorId: number;
   content: string;
   contentFormat: 'MARKDOWN' | 'TEXT' | string;
+  originalLanguage: string;
+  availableLanguages: string[];
+  semanticTags?: string[];
 }
 
 export interface CreatePostRequest {

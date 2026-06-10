@@ -33,6 +33,8 @@ public interface AiService {
 
     String extractMemorySemanticTags(String memoryMd, String language);
 
+    String extractBatchPostSemanticTags(String itemsPayloadJson, String language);
+
     String formatMarkdown(String content, String language);
 
     GeneratedCover generateCover(String title, String summary, String content, String language);

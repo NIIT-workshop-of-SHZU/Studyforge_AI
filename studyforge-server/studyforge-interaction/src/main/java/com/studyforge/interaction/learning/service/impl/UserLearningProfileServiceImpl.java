@@ -13,6 +13,9 @@ import com.studyforge.interaction.learning.model.SemanticTag;
 import com.studyforge.interaction.learning.service.UserLearningProfileService;
 import com.studyforge.interaction.learning.support.ImportanceScorer;
 import com.studyforge.interaction.learning.support.InterestTagCodec;
+import com.studyforge.interaction.learning.support.InterestTagNormalizer;
+import com.studyforge.interaction.learning.support.InterestTagResolver;
+import com.studyforge.interaction.learning.support.LearningMemoryPreferences;
 import com.studyforge.interaction.learning.support.LearningTextTagger;
 import com.studyforge.interaction.learning.support.SemanticTagParser;
 import com.studyforge.interaction.learning.vo.LearningMemoryVO;
@@ -61,11 +64,15 @@ public class UserLearningProfileServiceImpl implements UserLearningProfileServic
             return toVO(profile);
         }
 
+        boolean memoryChanged = false;
         if (request.memoryMd() != null) {
-            profile.setMemoryMd(limit(request.memoryMd().trim(), MAX_MEMORY_CHARS));
+            String nextMemory = limit(request.memoryMd().trim(), MAX_MEMORY_CHARS);
+            String previousMemory = profile.getMemoryMd() == null ? "" : profile.getMemoryMd();
+            memoryChanged = !nextMemory.equals(previousMemory);
+            profile.setMemoryMd(nextMemory);
             profile.setMemoryManuallyEdited(1);
         }
-        if (request.memoryMd() != null || request.interestTags() != null) {
+        if (memoryChanged || request.interestTags() != null) {
             profile.setInterestTags(InterestTagCodec.encode(rebuildInterestTags(profile, request)));
         }
         if (request.aiMemoryEnabled() != null) {
@@ -261,7 +268,7 @@ public class UserLearningProfileServiceImpl implements UserLearningProfileServic
     private LearningMemoryVO toVO(UserLearningProfile profile) {
         return new LearningMemoryVO(
                 profile.getMemoryMd() == null ? "" : profile.getMemoryMd(),
-                InterestTagCodec.decode(profile.getInterestTags()),
+                InterestTagResolver.resolve(profile.getMemoryMd(), InterestTagCodec.decode(profile.getInterestTags())),
                 profile.getAiMemoryEnabled() == null || profile.getAiMemoryEnabled() != 0,
                 isMemoryManuallyEdited(profile),
                 profile.getLastRefreshedAt(),
@@ -275,7 +282,8 @@ public class UserLearningProfileServiceImpl implements UserLearningProfileServic
                 ? request.interestTags().stream().map(tag -> new InterestTag(tag.tag(), clamp(tag.weight()), "manual")).toList()
                 : existing.stream().filter(tag -> "manual".equalsIgnoreCase(tag.source())).toList();
         if (isMemoryManuallyEdited(profile) && profile.getMemoryMd() != null && !profile.getMemoryMd().isBlank()) {
-            return InterestTagCodec.merge(extractSemanticInterestTags(profile.getMemoryMd()), manualTags);
+            List<InterestTag> extracted = extractSemanticInterestTags(profile.getMemoryMd());
+            return InterestTagResolver.mergePreservingExisting(existing, extracted, manualTags);
         }
         List<InterestTag> memoryTags = LearningTextTagger.memoryDerivedTags(profile.getMemoryMd())
                 .stream()
@@ -288,15 +296,61 @@ public class UserLearningProfileServiceImpl implements UserLearningProfileServic
     }
 
     private List<InterestTag> extractSemanticInterestTags(String memoryMd) {
+        List<InterestTag> merged = new ArrayList<>();
         String raw = aiService.extractMemorySemanticTags(memoryMd, "zh_CN");
         List<SemanticTag> parsed = SemanticTagParser.parseTags(raw);
         if (!parsed.isEmpty()) {
-            return SemanticTagParser.toInterestTags(parsed, "semantic");
+            merged.addAll(SemanticTagParser.toInterestTags(parsed, "semantic"));
         }
-        return LearningTextTagger.memoryDerivedTags(memoryMd)
-                .stream()
-                .map(tag -> new InterestTag(tag.tag(), tag.weight(), "memory", "like"))
-                .toList();
+        for (InterestTag ruleTag : LearningTextTagger.memoryDerivedTags(memoryMd)) {
+            boolean duplicated = merged.stream().anyMatch(tag -> tagsOverlap(tag.tag(), ruleTag.tag()));
+            if (!duplicated) {
+                merged.add(new InterestTag(ruleTag.tag(), Math.max(0.75, ruleTag.weight()), "memory", "like"));
+            }
+        }
+        appendLanguagePreferenceTags(memoryMd, merged);
+        if (merged.isEmpty()) {
+            return InterestTagNormalizer.normalize(
+                    LearningTextTagger.memoryDerivedTags(memoryMd)
+                            .stream()
+                            .map(tag -> new InterestTag(tag.tag(), tag.weight(), "memory", "like"))
+                            .toList()
+            );
+        }
+        return InterestTagNormalizer.normalize(merged);
+    }
+
+    private void appendLanguagePreferenceTags(String memoryMd, List<InterestTag> merged) {
+        LearningMemoryPreferences preferences = LearningMemoryPreferences.parse(memoryMd);
+        if (preferences.dislikesEnglish()) {
+            boolean hasDislike = merged.stream().anyMatch(tag -> tag.isDislike() && isLanguageTag(tag.tag()));
+            if (!hasDislike) {
+                merged.add(new InterestTag("英文文章", 0.88, "semantic", "dislike"));
+            }
+        }
+        if (preferences.prefersChinese()) {
+            boolean hasChinese = merged.stream().anyMatch(tag -> "中文".equalsIgnoreCase(tag.tag()) || tag.tag().contains("中文"));
+            if (!hasChinese) {
+                merged.add(new InterestTag("中文", 0.8, "semantic", "like"));
+            }
+        }
+    }
+
+    private boolean tagsOverlap(String left, String right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        String a = left.toLowerCase(Locale.ROOT);
+        String b = right.toLowerCase(Locale.ROOT);
+        return a.equals(b) || a.contains(b) || b.contains(a);
+    }
+
+    private boolean isLanguageTag(String tag) {
+        if (tag == null || tag.isBlank()) {
+            return false;
+        }
+        String normalized = tag.toLowerCase(Locale.ROOT);
+        return normalized.contains("英文") || normalized.contains("英语") || normalized.contains("english");
     }
 
     private UserLearningProfile reloadProfile(Long userId) {

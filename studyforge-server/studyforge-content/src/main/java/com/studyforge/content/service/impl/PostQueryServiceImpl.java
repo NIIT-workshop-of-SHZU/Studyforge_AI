@@ -41,13 +41,20 @@ public class PostQueryServiceImpl implements PostQueryService {
             throw new BizException(ErrorCode.NOT_FOUND);
         }
 
-        PostI18n content = resolveContent(post, normalizeLanguage(languageCode));
+        String effectiveLanguage = resolveDetailLanguage(post, languageCode);
+        PostI18n content = resolveContent(post, effectiveLanguage);
         if (content == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "post content not found");
         }
 
         Category category = categoryMapper.selectById(post.getCategoryId());
         User author = userMapper.selectById(post.getAuthorId());
+        List<String> availableLanguages = postI18nMapper.selectByPostId(post.getPostId())
+                .stream()
+                .map(PostI18n::getLanguageCode)
+                .distinct()
+                .sorted()
+                .toList();
         return new PostDetailVO(
                 post.getPostId(),
                 post.getAuthorId(),
@@ -57,6 +64,8 @@ public class PostQueryServiceImpl implements PostQueryService {
                 content.getSummary(),
                 content.getContent(),
                 content.getLanguageCode(),
+                normalizeLanguage(post.getOriginalLanguage()),
+                availableLanguages,
                 category == null ? "UNKNOWN" : category.getCategoryCode(),
                 post.getCoverImageUrl(),
                 content.getContentFormat() == null ? "MARKDOWN" : content.getContentFormat(),
@@ -66,7 +75,8 @@ public class PostQueryServiceImpl implements PostQueryService {
                 safeInt(post.getViewCount()),
                 toDouble(post.getHotScore()),
                 post.getCreatedTime(),
-                post.getUpdatedTime()
+                post.getUpdatedTime(),
+                List.of()
         );
     }
 
@@ -77,7 +87,7 @@ public class PostQueryServiceImpl implements PostQueryService {
 
         return postMapper.selectPublishedByHotScore(normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizedLanguage))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -89,7 +99,7 @@ public class PostQueryServiceImpl implements PostQueryService {
 
         return postMapper.selectPublished(emptyToNull(categoryCode), emptyToNull(keyword), normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizedLanguage))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -99,7 +109,7 @@ public class PostQueryServiceImpl implements PostQueryService {
         int normalizedLimit = normalizeLimit(limit, 30);
         return postMapper.selectPublishedByAuthor(authorId, normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizeLanguage(languageCode)))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -109,7 +119,7 @@ public class PostQueryServiceImpl implements PostQueryService {
         int normalizedLimit = normalizeLimit(limit, 30);
         return postMapper.selectFavoritesByUser(userId, normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizeLanguage(languageCode)))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -119,7 +129,7 @@ public class PostQueryServiceImpl implements PostQueryService {
         int normalizedLimit = normalizeLimit(limit, 30);
         return postMapper.selectFavoriteCollectionByUser(userId, collectionId, normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizeLanguage(languageCode)))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -138,7 +148,7 @@ public class PostQueryServiceImpl implements PostQueryService {
         int normalizedLimit = normalizeLimit(limit, 30);
         return postMapper.selectHistoryByUser(userId, normalizedLimit)
                 .stream()
-                .map(post -> toSummary(post, normalizeLanguage(languageCode)))
+                .map(this::toOriginalSummary)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -203,6 +213,13 @@ public class PostQueryServiceImpl implements PostQueryService {
         return category == null ? "UNKNOWN" : category.getCategoryCode();
     }
 
+    private String resolveDetailLanguage(Post post, String languageCode) {
+        if (languageCode == null || languageCode.isBlank()) {
+            return normalizeLanguage(post.getOriginalLanguage());
+        }
+        return normalizeLanguage(languageCode);
+    }
+
     private PostI18n resolveContent(Post post, String languageCode) {
         PostI18n content = postI18nMapper.selectByPostIdAndLanguage(post.getPostId(), languageCode);
         if (content != null) {
@@ -239,4 +256,5 @@ public class PostQueryServiceImpl implements PostQueryService {
     private double toDouble(BigDecimal value) {
         return value == null ? 0.0 : value.doubleValue();
     }
+
 }

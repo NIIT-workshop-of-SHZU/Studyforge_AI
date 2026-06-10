@@ -259,6 +259,40 @@ public class SiliconFlowAiServiceImpl implements AiService {
     }
 
     @Override
+    public String extractBatchPostSemanticTags(String itemsPayloadJson, String language) {
+        String prompt = isEnglish(language)
+                ? """
+                For each saved article below, extract 4 to 8 semantic learning tags with weights.
+                Input JSON array:
+                [{"postId":1,"title":"...","summary":"..."}]
+                Output JSON array only:
+                [{"postId":1,"tags":[{"tag":"Vue","weight":0.92},{"tag":"frontend","weight":0.74}]}]
+                Rules:
+                - keep postId unchanged
+                - weight between 0.1 and 1.0
+                - no markdown fences
+
+                Items:
+                %s
+                """.formatted(blankToEmpty(itemsPayloadJson))
+                : """
+                为下面每篇收藏文章提取 4 到 8 个带权重的语义学习标签。
+                输入 JSON 数组：
+                [{"postId":1,"title":"...","summary":"..."}]
+                只输出 JSON 数组：
+                [{"postId":1,"tags":[{"tag":"Vue","weight":0.92},{"tag":"前端","weight":0.74}]}]
+                规则：
+                - postId 必须原样保留
+                - weight 在 0.1 到 1.0 之间
+                - 不要 markdown 代码块
+
+                文章列表：
+                %s
+                """.formatted(blankToEmpty(itemsPayloadJson));
+        return complete(prompt, () -> fallback.extractBatchPostSemanticTags(itemsPayloadJson, language));
+    }
+
+    @Override
     public String formatMarkdown(String content, String language) {
         String prompt = isEnglish(language)
                 ? """
