@@ -477,12 +477,14 @@
         INSERT INTO friend_messages (
             sender_id,
             receiver_id,
-            content
+            content,
+            message_type
         )
         VALUES (
             #{senderId},
             #{receiverId},
-            #{content}
+            #{content},
+            #{messageType}
         )
     </insert>
 
@@ -498,6 +500,7 @@
             COALESCE(NULLIF(receiver.display_name, ''), receiver.username) AS receiverDisplayName,
             receiver.avatar_url AS receiverAvatarUrl,
             fm.content AS content,
+            fm.message_type AS messageType,
             fm.read_flag AS readFlag,
             fm.created_time AS createdTime
         FROM friend_messages fm
@@ -520,5 +523,58 @@
         WHERE sender_id = #{friendId}
           AND receiver_id = #{userId}
           AND read_flag = 0
+    </update>
+
+    <select id="countStickers" resultType="int">
+        SELECT COUNT(*)
+        FROM user_stickers
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectStickers" resultType="map">
+        SELECT
+            sticker_id AS stickerId,
+            image_url AS imageUrl,
+            sort_no AS sortNo
+        FROM user_stickers
+        WHERE user_id = #{userId}
+        ORDER BY sort_no ASC, sticker_id ASC
+    </select>
+
+    <select id="selectStickerById" resultType="map">
+        SELECT
+            sticker_id AS stickerId,
+            image_url AS imageUrl,
+            sort_no AS sortNo
+        FROM user_stickers
+        WHERE user_id = #{userId}
+          AND sticker_id = #{stickerId}
+        LIMIT 1
+    </select>
+
+    <insert id="insertSticker">
+        INSERT INTO user_stickers (
+            user_id,
+            image_url,
+            sort_no
+        )
+        VALUES (
+            #{userId},
+            #{imageUrl},
+            #{sortNo}
+        )
+    </insert>
+
+    <delete id="deleteSticker">
+        DELETE FROM user_stickers
+        WHERE user_id = #{userId}
+          AND sticker_id = #{stickerId}
+    </delete>
+
+    <update id="updateStickerSort">
+        UPDATE user_stickers
+        SET sort_no = #{sortNo}
+        WHERE user_id = #{userId}
+          AND sticker_id = #{stickerId}
     </update>
 </mapper>

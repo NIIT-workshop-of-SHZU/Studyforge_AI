@@ -10,6 +10,7 @@ public record FriendMessageVO(Long messageId,
                               String receiverName,
                               String receiverAvatarUrl,
                               String content,
+                              String messageType,
                               boolean read,
                               LocalDateTime createdTime) {
 }
